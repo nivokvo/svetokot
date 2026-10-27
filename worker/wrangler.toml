@@ -1,0 +1,31 @@
+name = "lamps-bot"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# раз в минуту: циркадный, рассвет под будильник, таймер засыпания
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lamps-bot"
+database_id = "00000000-0000-0000-0000-000000000000"  # заменить на id из `npx wrangler d1 create lamps-bot`
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+# Секреты (не в коде): npx wrangler secret put BOT_TOKEN; npx wrangler secret put YANDEX_TOKEN < ~/.config/yandex-iot-token
+[vars]
+OWNER_ID = "981748795"
+PUBLIC_URL = "https://lamps-bot.7vy7m8srtf.workers.dev"
+# «Лампа 1» и «Лампа 2» в Яндексе (обе называются «Лампа», комната «Спальня»)
+LAMPS = "07bdc6e3-e577-4ae8-8bc4-a87e6a34b62b,ba30f84b-4f56-49dd-b3ac-b3922d71de83"
+# Минск: восход и закат для циркадного
+LAT = "53.90"
+LON = "27.56"
+
+[observability]
+enabled = true

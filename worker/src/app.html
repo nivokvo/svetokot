@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Светокот</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --bg: var(--tg-theme-bg-color, #fff);
+  --text: var(--tg-theme-text-color, #111);
+  --hint: var(--tg-theme-hint-color, #8a8a8e);
+  --accent: var(--tg-theme-button-color, #2a7de1);
+  --accent-text: var(--tg-theme-button-text-color, #fff);
+  --danger: var(--tg-theme-destructive-text-color, #e5484d);
+  --card: color-mix(in srgb, var(--text) 7%, var(--bg));
+  --card2: color-mix(in srgb, var(--text) 12%, var(--bg));
+  --line: color-mix(in srgb, var(--hint) 22%, transparent);
+  --glow: #ffd27a;
+}
+html[data-theme="light"] { --bg: #ffffff; --text: #111111; --hint: #8a8a8e; --accent: #2a7de1; --accent-text: #fff; --danger: #e5484d; }
+html[data-theme="dark"] { --bg: #0e0e10; --text: #f2f2f4; --hint: #8e8e93; --accent: #0a84ff; --accent-text: #fff; --danger: #ff6369; }
+html[data-theme="pink"] { --bg: #fff1f7; --text: #5b2343; --hint: #b47494; --accent: #ff5fa2; --accent-text: #fff; --danger: #e0457b;
+  --card: #ffe2ef; --card2: #ffd1e6; --line: #f6b8d3; }
+html[data-theme="pink"] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23ff5fa2' fill-opacity='.07'%3E%3Cellipse cx='30' cy='34' rx='9' ry='7'/%3E%3Ccircle cx='19' cy='22' r='4'/%3E%3Ccircle cx='27' cy='17' r='4'/%3E%3Ccircle cx='35' cy='17' r='4'/%3E%3Ccircle cx='42' cy='23' r='4'/%3E%3Cellipse cx='88' cy='92' rx='9' ry='7'/%3E%3Ccircle cx='77' cy='80' r='4'/%3E%3Ccircle cx='85' cy='75' r='4'/%3E%3Ccircle cx='93' cy='75' r='4'/%3E%3Ccircle cx='100' cy='81' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+html[data-theme="pink"] h1 { color: #e23d86; }
+/* «Под цвет ламп»: тёмный фон и акценты подкрашены текущим цветом ламп (значения ставит applyLampTheme) */
+html[data-theme="lamp"] { --bg: #0d0d10; --text: #f4f2ee; --hint: #9a978f; --accent: var(--glow); --accent-text: #15120c; --danger: #ff6369;
+  --card: color-mix(in srgb, var(--glow) 9%, #17171b); --card2: color-mix(in srgb, var(--glow) 16%, #1d1d22);
+  --line: color-mix(in srgb, var(--glow) 18%, transparent); }
+html[data-theme="lamp"] body { background: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--glow) 22%, #0d0d10), #0d0d10 70%) fixed; }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { overflow-x: hidden; }
+body { margin: 0; padding: 16px 16px 32px; background: var(--bg); color: var(--text);
+       font: 16px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; transition: background-color .4s; }
+h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -.2px; }
+h2 { font-size: 13px; font-weight: 500; color: var(--hint); margin: 22px 0 8px; display: flex; justify-content: space-between; align-items: center; }
+button { font: inherit; color: inherit; }
+input { font: inherit; color: var(--text); }
+
+.head { display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; position: relative; }
+.hbtns { display: flex; gap: 8px; }
+.roundbtn { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--card); color: var(--hint); display: flex;
+            align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.themes { position: absolute; right: 0; top: 44px; z-index: 15; display: grid; gap: 2px; min-width: 190px; padding: 6px;
+          background: var(--card2); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+          transform-origin: top right; transition: opacity .15s, transform .15s; }
+.themes.closed { opacity: 0; transform: scale(.92); pointer-events: none; }
+.themes .opt { padding: 10px 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.themes .opt.on { color: var(--accent); font-weight: 600; }
+.themes .opt.on::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+.seg { display: flex; background: var(--card); border-radius: 12px; padding: 3px; gap: 2px; }
+.seg button { flex: 1; min-width: 0; border: 0; background: none; padding: 8px 4px; border-radius: 9px; cursor: pointer; font-size: 14px;
+              font-weight: 500; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background .15s, color .15s; }
+.seg button.on { background: var(--card2); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+html[data-theme="pink"] .seg button.on, html[data-theme="lamp"] .seg button.on { background: var(--accent); color: var(--accent-text); }
+
+/* лампочка */
+/* «сцена» — всегда тёмная, чтобы свечение было видно и в светлой теме */
+.hero { position: relative; display: flex; flex-direction: column; align-items: center; padding: 14px 12px 16px; margin-top: 12px;
+        border-radius: 22px; color: #f4f2ee; overflow: hidden;
+        background: radial-gradient(90% 70% at 50% 35%, color-mix(in srgb, var(--glow) calc(var(--halo, .9) * 26%), #16161b), #0c0c0f 75%); }
+html[data-theme="pink"] .hero { background: radial-gradient(90% 70% at 50% 35%, color-mix(in srgb, var(--glow) calc(var(--halo, .9) * 26%), #3a1730), #24101f 75%); overflow: visible; }
+.hero .status small { color: rgba(244,242,238,.6); }
+.bulbwrap { position: relative; width: 190px; height: 210px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.halo { position: absolute; left: 50%; top: 42%; width: 260px; height: 260px; transform: translate(-50%, -50%); border-radius: 50%;
+        background: radial-gradient(circle, var(--glow) 0%, color-mix(in srgb, var(--glow) 45%, transparent) 30%, transparent 68%);
+        opacity: var(--halo, .9); filter: blur(6px); transition: opacity .35s, background .35s; pointer-events: none; }
+.bulb { position: relative; width: 100%; height: 100%; transition: transform .15s; }
+.bulbwrap:active .bulb { transform: scale(.96); }
+.bulb .glass { transition: fill .35s; }
+.status { margin-top: 4px; font-size: 15px; font-weight: 500; text-align: center; min-height: 21px; }
+.status small { display: block; color: var(--hint); font-size: 13px; font-weight: 400; }
+.paused { margin-top: 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: rgba(244,242,238,.75);
+          background: rgba(255,255,255,.1); border-radius: 999px; padding: 5px 6px 5px 12px; }
+.paused button { border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-text); padding: 4px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ears { display: none; }
+html[data-theme="pink"] .ears { display: inline; }
+
+.tabs { margin-top: 14px; position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
+html[data-theme="lamp"] .tabs, html[data-theme="pink"] .tabs { background: transparent; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.pane { display: none; padding-top: 6px; }
+.pane.on { display: block; }
+.card { background: var(--card); border-radius: 16px; padding: 14px; }
+.card + .card { margin-top: 10px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hint { color: var(--hint); font-size: 13px; }
+
+/* цветовой круг */
+.wheelbox { position: relative; width: min(260px, 72vw); aspect-ratio: 1; margin: 6px auto 14px; touch-action: none; }
+.wheelbox canvas { width: 100%; height: 100%; border-radius: 50%; display: block; }
+.knob { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 3px solid #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.35); pointer-events: none; }
+.swatches { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 14px; }
+.swatches button { flex: 1; aspect-ratio: 1; max-width: 34px; border-radius: 50%; border: 0; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+
+/* ползунки */
+.slider { margin-top: 4px; }
+.slider .row { font-size: 14px; margin-bottom: 8px; }
+.slider .row b { font-weight: 600; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; border-radius: 17px; margin: 0; outline: none; cursor: pointer;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--text) 10%, transparent), var(--glow)); }
+input[type=range].temp { background: linear-gradient(90deg, #ff8a1f, #ffb35c 18%, #ffd9a8 35%, #fff4e6 50%, #f2f4ff 70%, #cfdcff 100%); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 6px rgba(0,0,0,.35); border: 0; }
+input[type=range]::-moz-range-thumb { width: 30px; height: 30px; border-radius: 50%; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.35); border: 0; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 0; border-radius: 999px; background: var(--card2); padding: 7px 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.chip.on { background: var(--accent); color: var(--accent-text); }
+.chip .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+
+/* сцены */
+.night { display: flex; align-items: center; gap: 14px; cursor: pointer; border: 0; width: 100%; text-align: left;
+         background: linear-gradient(135deg, #2b1d3f, #4a2a20); color: #fff; border-radius: 16px; padding: 16px; }
+.night .ic { width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #ffcf7a, #ff8a2a); flex: 0 0 auto;
+             box-shadow: 0 0 22px #ff9a3c; }
+.night b { font-size: 17px; display: block; }
+.night small { opacity: .75; font-size: 13px; }
+.scenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.scene { border: 0; border-radius: 14px; aspect-ratio: 1.15; padding: 10px; color: #fff; font-size: 14px; font-weight: 600; text-align: left;
+         display: flex; align-items: flex-end; cursor: pointer; text-shadow: 0 1px 3px rgba(0,0,0,.35); box-shadow: inset 0 0 0 2px transparent; }
+.scene.on, .night.on { box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px var(--accent); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; background: var(--card); padding: 7px 8px 7px 10px; cursor: pointer; font-size: 14px; }
+.preset i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.preset .x { color: var(--hint); font-size: 16px; line-height: 1; padding: 0 2px; }
+.save { display: flex; gap: 6px; margin-top: 10px; }
+.save input { flex: 1; min-width: 0; border: 0; background: var(--card); border-radius: 12px; padding: 9px 12px; outline: none; }
+.card .save input { background: var(--card2); }
+.btn { border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-text); padding: 9px 14px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.btn.ghost { background: var(--card2); color: var(--text); }
+.btn.danger { background: none; color: var(--danger); padding-left: 0; padding-right: 0; }
+.btn:disabled { opacity: .5; }
+
+/* режимы */
+.sw { width: 46px; height: 28px; border-radius: 14px; background: var(--line); position: relative; flex: 0 0 auto; transition: background .2s; border: 0; cursor: pointer; padding: 0; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+             box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .2s; }
+.sw.on { background: var(--accent); }
+.sw.on::after { transform: translateX(18px); }
+html[data-theme="lamp"] .sw.on::after { background: #15120c; }
+.ttl { font-weight: 600; font-size: 16px; }
+.chart { width: 100%; height: auto; display: block; margin: 12px 0 6px; overflow: visible; }
+.chart text { fill: var(--hint); font-size: 10px; }
+.steppers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.stepper { background: var(--card2); border-radius: 12px; padding: 8px 4px; text-align: center; }
+.stepper small { display: block; color: var(--hint); font-size: 11px; }
+.stepper .v { display: flex; align-items: center; justify-content: space-between; gap: 2px; font-weight: 600; font-size: 14px; }
+.stepper span { white-space: nowrap; font-size: 13px; }
+.stepper button { border: 0; background: none; color: var(--accent); width: 24px; height: 28px; font-size: 20px; cursor: pointer; padding: 0; flex: 0 0 auto; }
+.alarm { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.alarm + .alarm { border-top: 1px solid var(--line); }
+.alarm .tm { font-size: 26px; font-weight: 600; letter-spacing: -.5px; cursor: pointer; }
+.alarm .grow { flex: 1; min-width: 0; cursor: pointer; }
+.days { display: flex; gap: 4px; flex-wrap: wrap; }
+.days button { width: 36px; height: 32px; border: 0; border-radius: 10px; background: var(--card2); cursor: pointer; font-size: 13px; padding: 0; }
+.days button.on { background: var(--accent); color: var(--accent-text); }
+.editor { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 12px; display: grid; gap: 10px; }
+.editor input[type=time] { border: 0; background: var(--card2); border-radius: 12px; padding: 8px 12px; font-size: 22px; font-weight: 600; width: 130px; }
+.timers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.timers button { border: 0; border-radius: 12px; background: var(--card2); padding: 12px 0; font-weight: 600; cursor: pointer; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 10px 0; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .5s; }
+
+/* настройки */
+#settings .field { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+#settings .field + .field { border-top: 1px solid var(--line); }
+#settings .field input { flex: 1; min-width: 0; border: 0; background: none; outline: none; padding: 4px 0; }
+.user { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.user + .user { border-top: 1px solid var(--line); }
+.user .grow { flex: 1; min-width: 0; }
+.back { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 4px 0; font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
+
+.problem { text-align: center; padding: 28px 18px; }
+.problem b { display: block; font-size: 17px; margin-bottom: 6px; }
+.toast { position: fixed; left: 50%; top: 12px; transform: translate(-50%, -200%); visibility: hidden; background: var(--text); color: var(--bg);
+         padding: 10px 16px; border-radius: 14px; font-size: 14px; font-weight: 500; transition: transform .35s; z-index: 30;
+         max-width: calc(100vw - 32px); text-align: center; }
+.toast.err { background: var(--danger); color: #fff; }
+.toast.show { transform: translate(-50%, 0); visibility: visible; }
+.skel { opacity: .5; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<div id="main">
+  <div class="head">
+    <h1 id="title">Светокот</h1>
+    <div class="hbtns">
+      <button class="roundbtn" id="gear" type="button" aria-label="Настройки">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <button class="roundbtn" id="themebtn" type="button" aria-label="Тема">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.6-1.3-.6-2.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
+      </button>
+    </div>
+    <div class="themes closed" id="themes"></div>
+  </div>
+
+  <div class="seg" id="target"></div>
+
+  <div class="hero" id="hero">
+    <div class="bulbwrap" id="bulb" role="button" aria-label="Включить или выключить">
+      <div class="halo" id="halo"></div>
+      <svg class="bulb" viewBox="0 0 190 210" aria-hidden="true">
+        <defs>
+          <radialGradient id="shine" cx="38%" cy="30%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".35" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+        </defs>
+        <g class="ears"><path d="M48 52 L52 14 L80 34 Z M142 52 L138 14 L110 34 Z" fill="#ffd1e6" stroke="#e86aa3" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M55 42 L57 24 L71 34 Z M135 42 L133 24 L119 34 Z" fill="#ff9cc8"/></g>
+        <path class="glass" id="glass" d="M95 18c-38 0-66 28-66 63 0 22 11 37 23 50 8 9 12 17 12 27v6h62v-6c0-10 4-18 12-27 12-13 23-28 23-50 0-35-28-63-66-63z"/>
+        <path d="M95 18c-38 0-66 28-66 63 0 22 11 37 23 50 8 9 12 17 12 27v6h62v-6c0-10 4-18 12-27 12-13 23-28 23-50 0-35-28-63-66-63z" fill="url(#shine)"/>
+        <path id="filament" d="M80 150 V118 l-8 -18 q8 -10 15 0 q8 -10 16 0 q7 -10 15 0 l-8 18 V150" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <g class="ears"><ellipse cx="80" cy="84" rx="4" ry="5" fill="#5b2343"/><ellipse cx="110" cy="84" rx="4" ry="5" fill="#5b2343"/>
+          <path d="M92 94 L95 97 L98 94 Z" fill="#ff5fa2"/></g>
+        <rect x="64" y="166" width="62" height="10" rx="5" fill="#b9b9c0"/>
+        <rect x="66" y="178" width="58" height="9" rx="4.5" fill="#a2a2aa"/>
+        <rect x="70" y="189" width="50" height="9" rx="4.5" fill="#8e8e96"/>
+        <path d="M84 200 h22 l-4 8 h-14 z" fill="#6f6f78"/>
+      </svg>
+    </div>
+    <div class="status" id="status"><span class="skel">Загружаю…</span></div>
+    <div id="pausebox"></div>
+  </div>
+
+  <div class="tabs"><div class="seg" id="tabs"></div></div>
+
+  <div class="pane" id="p-color">
+    <div class="card">
+      <div class="wheelbox" id="wheelbox"><canvas id="wheel"></canvas><div class="knob" id="knob"></div></div>
+      <div class="swatches" id="swatches"></div>
+      <div class="slider"><div class="row"><span>Яркость</span><b id="cb-v">100%</b></div><input type="range" id="cb" min="1" max="100" value="100"></div>
+    </div>
+  </div>
+
+  <div class="pane" id="p-white">
+    <div class="card">
+      <div class="slider"><div class="row"><span>Температура</span><b id="tk-v">4000 K</b></div><input type="range" class="temp" id="tk" min="1500" max="9000" step="100" value="4000"></div>
+      <div class="chips" id="whites" style="margin:12px 0 16px"></div>
+      <div class="slider"><div class="row"><span>Яркость</span><b id="wb-v">100%</b></div><input type="range" id="wb" min="1" max="100" value="100"></div>
+    </div>
+  </div>
+
+  <div class="pane" id="p-scenes">
+    <button class="night" id="nightbtn" type="button"><span class="ic"></span><span><b>Ночник</b><small>Тёплая свеча, самый тусклый свет</small></span></button>
+    <div class="scenes" id="scenes"></div>
+    <h2>Мои пресеты</h2>
+    <div class="presets" id="presets"></div>
+    <div class="save"><input id="pname" placeholder="Название пресета" maxlength="20"><button class="btn" id="psave" type="button">Сохранить текущий</button></div>
+  </div>
+
+  <div class="pane" id="p-modes">
+    <div class="card" id="circcard"></div>
+    <div class="card" id="dawncard"></div>
+    <div class="card" id="timercard"></div>
+  </div>
+</div>
+
+<div id="settings" hidden></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+tg?.ready(); tg?.expand();
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+const haptic = {
+  tap: () => tg?.HapticFeedback?.impactOccurred("light"),
+  pick: () => tg?.HapticFeedback?.selectionChanged(),
+  ok: () => tg?.HapticFeedback?.notificationOccurred("success"),
+  err: () => tg?.HapticFeedback?.notificationOccurred("error"),
+};
+const hm = ms => { const d = new Date(ms + 3 * 3600e3); return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`; };
+const hmMin = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(Math.round(m % 60)).padStart(2, "0")}`;
+const DAYS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+const SCENES = {ocean: ["Океан", "linear-gradient(135deg,#0b6bd3,#2fd1ff)", "#2aa7ff"], romance: ["Романтика", "linear-gradient(135deg,#c2185b,#ff6f91)", "#ff4f8b"],
+  night: ["Ночь", "linear-gradient(135deg,#1a237e,#5c6bc0)", "#4d5bff"], dinner: ["Ужин", "linear-gradient(135deg,#d9822b,#ffcc80)", "#ffb347"],
+  garland: ["Гирлянда", "linear-gradient(135deg,#e53935,#fdd835 35%,#43a047 65%,#1e88e5)", "#ff6ad5"], rest: ["Отдых", "linear-gradient(135deg,#2e7d6b,#9be3c6)", "#7fd1ae"],
+  candle: ["Ночник", "linear-gradient(135deg,#4a2a20,#ff9a3c)", "#ff9a3c"]};
+const WHITES = [[2200, "Свеча"], [2700, "Тёплый"], [4000, "Нейтральный"], [5500, "Дневной"], [6500, "Холодный"]];
+const SWATCHES = [[0, 100], [25, 100], [50, 100], [120, 90], [180, 90], [220, 100], [275, 85], [320, 80]];
+
+// ---------- цвет: HSV и цветовая температура в RGB ----------
+function hsvRgb(h, s, v = 100) {
+  s /= 100; v /= 100;
+  const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return [f(5), f(3), f(1)].map(x => Math.round(x * 255));
+}
+function kRgb(k) {  // приближение Таннера Хелланда
+  const t = k / 100;
+  const r = t <= 66 ? 255 : 329.7 * Math.pow(t - 60, -0.1332);
+  const g = t <= 66 ? 99.47 * Math.log(t) - 161.12 : 288.12 * Math.pow(t - 60, -0.0755);
+  const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.52 * Math.log(t - 10) - 305.04;
+  return [r, g, b].map(x => Math.round(Math.max(0, Math.min(255, x))));
+}
+const css = rgb => `rgb(${rgb.join(",")})`;
+const hex = rgb => "#" + rgb.map(x => x.toString(16).padStart(2, "0")).join("");
+function lampRgb(l) {
+  if (!l || !l.on) return null;
+  if (l.mode === "hsv") return hsvRgb(l.hsv.h, l.hsv.s);
+  if (l.mode === "scene") { const c = SCENES[l.scene]?.[2] || "#ffb35c"; return [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)); }
+  return kRgb(l.temp);
+}
+
+// ---------- хранилище: тема в облаке Telegram (на всех устройствах), иначе в браузере ----------
+const store = {
+  get: k => new Promise(res => {
+    if (tg?.CloudStorage && tg.isVersionAtLeast?.("6.9")) tg.CloudStorage.getItem(k, (e, v) => res(e ? null : v));
+    else { try { res(localStorage.getItem(k)); } catch { res(null); } }
+  }),
+  set: (k, v) => {
+    if (tg?.CloudStorage && tg.isVersionAtLeast?.("6.9")) tg.CloudStorage.setItem(k, v);
+    else { try { localStorage.setItem(k, v); } catch {} }
+  },
+};
+
+// ---------- API ----------
+async function api(path, body) {
+  let res, data;
+  try {
+    res = await fetch(path, {method: body ? "POST" : "GET", headers: {"content-type": "application/json", "x-init-data": tg?.initData || ""},
+                             body: body ? JSON.stringify(body) : undefined});
+    data = await res.json();
+  } catch { throw new Error("Нет связи с сервером. Проверьте интернет."); }
+  if (!res.ok) { const e = new Error(data.error || "Сервис временно недоступен."); e.code = data.code; e.status = res.status; throw e; }
+  return data;
+}
+
+function toast(text, err) {
+  const t = $("toast");
+  t.textContent = text; t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), err ? 4500 : 2200);
+  t.onclick = () => t.classList.remove("show");
+  if (err) haptic.err();
+}
+
+// ---------- состояние ----------
+let S = null;                 // ответ /api/state
+let target = "both";          // "both" | 0 | 1
+let tab = "white";
+let busy = 0, dragging = false;
+const ids = () => target === "both" ? [0, 1] : [target];
+const shown = () => {          // какую лампу показываем: выбранную или первую включённую из двух
+  if (!S?.lamps) return null;
+  if (target !== "both") return S.lamps[target];
+  return S.lamps.find(l => l.on) || S.lamps[0];
+};
+
+async function load(fresh) {
+  try {
+    S = await api("/api/state" + (fresh ? "?fresh=1" : ""));
+    draw();
+  } catch (e) {
+    if (!S) problem(e.status === 403 ? "Нет доступа" : e.status === 401 ? "Сессия устарела" : "Не получилось загрузить", e.message);
+    else toast(e.message, true);
+  }
+}
+
+function problem(title, text) {
+  $("main").innerHTML = `<div class="head"><h1>Светокот</h1></div><div class="card problem"><b>${esc(title)}</b><span class="hint">${esc(text)}</span>
+    <div style="margin-top:16px"><button class="btn" onclick="location.reload()">Обновить</button></div></div>`;
+}
+
+// Команда лампам: сразу меняем картинку, потом отправляем. При ошибке — возвращаем как было.
+async function cmd(kind, value, patch) {
+  const before = JSON.stringify(S.lamps);
+  for (const i of ids()) Object.assign(S.lamps[i], {on: kind !== "off"}, patch || {});
+  if (kind !== "on" && kind !== "off") for (const i of ids()) S.lamps[i].paused = S.circ.enabled ? 1 : null;
+  draw();
+  busy++;
+  try {
+    const r = await api("/api/set", {lamps: ids(), kind, value});
+    for (const l of r.lamps) Object.assign(S.lamps[l.idx], l, {paused: S.lamps[l.idx].paused});
+    if (kind !== "on" && kind !== "off" && S.circ.enabled) await load();  // время конца паузы знает сервер
+    else draw();
+  } catch (e) {
+    S.lamps = JSON.parse(before); draw();
+    toast(e.message, true);
+  } finally { busy--; }
+}
+
+// ---------- отрисовка ----------
+function draw() {
+  if (!S) return;
+  drawTarget(); drawBulb(); drawTabs();
+  drawColor(); drawWhite(); drawScenes(); drawModes();
+  if (theme === "lamp") applyLampTheme();
+}
+
+function drawTarget() {
+  const box = $("target");
+  const opts = [["both", "Обе"], [0, S.names[0]], [1, S.names[1]]];
+  box.innerHTML = opts.map(([k, n]) => `<button type="button" data-k="${k}" class="${target === k ? "on" : ""}">${esc(n)}</button>`).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => {
+    target = b.dataset.k === "both" ? "both" : +b.dataset.k; haptic.pick(); draw();
+  });
+}
+
+function drawBulb() {
+  const st = $("status"), pb = $("pausebox");
+  if (S.lampsError) {
+    $("glass").setAttribute("fill", "#2a2a31"); $("hero").style.setProperty("--halo", 0);
+    st.innerHTML = `<span style="color:#ff8a8f">${esc(S.lampsError)}</span>`; pb.innerHTML = ""; return;
+  }
+  const l = shown(), sel = ids().map(i => S.lamps[i]);
+  const rgb = lampRgb(l);
+  const anyOn = sel.some(x => x.on);
+  if (rgb && anyOn) {
+    document.documentElement.style.setProperty("--glow", css(rgb));
+    $("glass").setAttribute("fill", css(rgb.map(x => Math.round(x * .9 + 22))));
+    $("filament").setAttribute("stroke", css(rgb.map(x => Math.round(x * .62))));
+    $("hero").style.setProperty("--halo", (0.35 + 0.65 * (l.mode === "scene" ? .5 : l.bright / 100)).toFixed(2));
+  } else {
+    $("glass").setAttribute("fill", "#2a2a31");
+    $("filament").setAttribute("stroke", "rgba(255,255,255,.28)");
+    $("hero").style.setProperty("--halo", 0);
+  }
+  const offline = sel.filter(x => !x.online).map(x => x.name);
+  const what = !l.on ? "" : l.mode === "scene" ? (SCENES[l.scene]?.[0] || l.scene) : l.mode === "hsv" ? `Цвет · ${l.bright}%` : `${l.temp} K · ${l.bright}%`;
+  const head = target === "both"
+    ? (sel.every(x => x.on) ? "Обе включены" : sel.some(x => x.on) ? `Включена ${esc(sel.find(x => x.on).name)}` : "Обе выключены")
+    : (l.on ? "Включена" : "Выключена");
+  st.innerHTML = `${head}<small>${offline.length ? `Не в сети: ${esc(offline.join(", "))}` : esc(what) || "Нажмите на лампочку, чтобы включить"}</small>`;
+  const paused = S.circ.enabled && sel.some(x => x.paused);
+  const until = Math.max(...sel.map(x => x.paused || 0));
+  pb.innerHTML = paused ? `<div class="paused">Циркадный на паузе${until > 1 ? ` до ${hm(until)}` : ""}<button type="button" id="resume">Вернуть</button></div>` : "";
+  if (paused) $("resume").onclick = resume;
+}
+
+$("bulb").onclick = () => {
+  if (!S?.lamps) return;
+  haptic.tap();
+  const on = ids().some(i => S.lamps[i].on);
+  cmd(on ? "off" : "on");
+};
+
+async function resume() {
+  haptic.tap();
+  try { S = await api("/api/circadian", {}); draw(); toast("Циркадный снова ведёт свет"); }
+  catch (e) { toast(e.message, true); }
+}
+
+const TABS = [["color", "Цвет"], ["white", "Белый"], ["scenes", "Сцены"], ["modes", "Режимы"]];
+function drawTabs() {
+  $("tabs").innerHTML = TABS.map(([k, n]) => `<button type="button" data-k="${k}" class="${tab === k ? "on" : ""}">${n}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.k; haptic.pick(); store.set("tab", tab); draw(); });
+  for (const [k] of TABS) $("p-" + k).classList.toggle("on", tab === k);
+}
+
+// ---------- вкладка «Цвет»: круг HSV + яркость ----------
+const wheel = $("wheel"), wbox = $("wheelbox");
+let hue = 30, sat = 100;
+function paintWheel() {
+  const size = Math.round(wbox.clientWidth * (window.devicePixelRatio || 1));
+  if (!size || wheel.width === size) return;
+  wheel.width = wheel.height = size;
+  const ctx = wheel.getContext("2d"), img = ctx.createImageData(size, size), r = size / 2;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const dx = x - r, dy = y - r, d = Math.hypot(dx, dy) / r, i = (y * size + x) * 4;
+    if (d > 1) { img.data[i + 3] = 0; continue; }
+    const h = (Math.atan2(dy, dx) * 180 / Math.PI + 450) % 360;
+    const [R, G, B] = hsvRgb(h, d * 100);
+    img.data[i] = R; img.data[i + 1] = G; img.data[i + 2] = B; img.data[i + 3] = d > .985 ? (1 - d) / .015 * 255 : 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function placeKnob() {
+  const r = wbox.clientWidth / 2, a = (hue - 90) * Math.PI / 180, d = sat / 100 * (r - 4);
+  const k = $("knob");
+  k.style.left = r + Math.cos(a) * d + "px"; k.style.top = r + Math.sin(a) * d + "px";
+  k.style.background = css(hsvRgb(hue, sat));
+}
+function wheelAt(e) {
+  const b = wbox.getBoundingClientRect(), r = b.width / 2, dx = e.clientX - b.left - r, dy = e.clientY - b.top - r;
+  hue = Math.round((Math.atan2(dy, dx) * 180 / Math.PI + 450) % 360);
+  sat = Math.round(Math.min(1, Math.hypot(dx, dy) / (r - 4)) * 100);
+  placeKnob();
+  previewColor({mode: "hsv", hsv: {h: hue, s: sat, v: 100}});
+}
+wbox.addEventListener("pointerdown", e => { dragging = true; wbox.setPointerCapture(e.pointerId); wheelAt(e); });
+wbox.addEventListener("pointermove", e => { if (dragging) wheelAt(e); });
+const wheelUp = () => { if (!dragging) return; dragging = false; haptic.pick(); sendColor(); };
+wbox.addEventListener("pointerup", wheelUp);
+wbox.addEventListener("pointercancel", wheelUp);
+const sendColor = () => cmd("hsv", {h: hue, s: sat, b: +$("cb").value}, {mode: "hsv", hsv: {h: hue, s: sat, v: 100}, bright: +$("cb").value});
+
+// Пока палец ведёт — меняется только картинка; команда уходит, когда палец отпущен.
+function previewColor(patch) {
+  for (const i of ids()) Object.assign(S.lamps[i], {on: true}, patch);
+  drawBulb();
+  if (theme === "lamp") applyLampTheme();
+}
+
+$("swatches").innerHTML = SWATCHES.map(([h, s]) => `<button type="button" data-h="${h}" data-s="${s}" style="background:${css(hsvRgb(h, s))}" aria-label="Цвет"></button>`).join("");
+$("swatches").querySelectorAll("button").forEach(b => b.onclick = () => { hue = +b.dataset.h; sat = +b.dataset.s; placeKnob(); haptic.pick(); sendColor(); });
+
+function drawColor() {
+  if (tab !== "color") return;
+  paintWheel();
+  const l = shown();
+  if (!dragging && l?.mode === "hsv") { hue = l.hsv.h; sat = l.hsv.s; }
+  placeKnob();
+  if (!dragging && l) { $("cb").value = l.bright; $("cb-v").textContent = l.bright + "%"; }
+}
+$("cb").oninput = e => { $("cb-v").textContent = e.target.value + "%"; previewColor({bright: +e.target.value}); };
+$("cb").onchange = e => { haptic.pick(); cmd("bright", +e.target.value, {bright: +e.target.value}); };
+
+// ---------- вкладка «Белый» ----------
+$("whites").innerHTML = WHITES.map(([k, n]) => `<button type="button" class="chip" data-k="${k}"><span class="dot" style="background:${css(kRgb(k))}"></span>${n}</button>`).join("");
+$("whites").querySelectorAll("button").forEach(b => b.onclick = () => { haptic.pick(); sendWhite(+b.dataset.k); });
+const sendWhite = k => cmd("temp", {k, b: +$("wb").value}, {mode: "temp", temp: k, bright: +$("wb").value});
+function drawWhite() {
+  if (tab !== "white") return;
+  const l = shown();
+  if (!l) return;
+  const k = l.mode === "temp" ? l.temp : +$("tk").value;
+  $("tk").value = k; $("tk-v").textContent = k + " K";
+  $("wb").value = l.bright; $("wb-v").textContent = l.bright + "%";
+  $("whites").querySelectorAll("button").forEach(b => b.classList.toggle("on", l.on && l.mode === "temp" && +b.dataset.k === l.temp));
+}
+$("tk").oninput = e => { $("tk-v").textContent = e.target.value + " K"; previewColor({mode: "temp", temp: +e.target.value}); };
+$("tk").onchange = e => { haptic.pick(); sendWhite(+e.target.value); };
+$("wb").oninput = e => { $("wb-v").textContent = e.target.value + "%"; previewColor({bright: +e.target.value}); };
+$("wb").onchange = e => { haptic.pick(); cmd("bright", +e.target.value, {bright: +e.target.value}); };
+
+// ---------- вкладка «Сцены» ----------
+$("nightbtn").onclick = () => { haptic.tap(); cmd("night", null, {mode: "scene", scene: "candle"}); };
+function drawScenes() {
+  if (tab !== "scenes") return;
+  const l = shown(), cur = l?.on && l.mode === "scene" ? l.scene : null;
+  $("nightbtn").classList.toggle("on", cur === "candle");
+  $("scenes").innerHTML = (S.scenes || []).filter(s => s !== "candle" && SCENES[s]).map(s =>
+    `<button type="button" class="scene${cur === s ? " on" : ""}" data-s="${s}" style="background:${SCENES[s][1]}">${SCENES[s][0]}</button>`).join("");
+  $("scenes").querySelectorAll("button").forEach(b => b.onclick = () => { haptic.tap(); cmd("scene", b.dataset.s, {mode: "scene", scene: b.dataset.s}); });
+  const pr = S.presets || [];
+  $("presets").innerHTML = pr.length ? pr.map(p => `<span class="preset" data-id="${p.id}"><i style="background:${presetColor(p)}"></i>${esc(p.name)}<span class="x" data-del="${p.id}" role="button" aria-label="Удалить">×</span></span>`).join("")
+    : `<span class="hint">Настройте свет и сохраните его здесь, чтобы включать одним нажатием.</span>`;
+  $("presets").querySelectorAll(".preset").forEach(b => b.onclick = e => {
+    const id = e.target.dataset.del;
+    if (id) return delPreset(id);
+    const p = pr.find(x => x.id === b.dataset.id);
+    haptic.tap();
+    const v = p.cmd.value, patch = p.cmd.kind === "hsv" ? {mode: "hsv", hsv: {h: v.h, s: v.s, v: 100}, bright: v.b || 100}
+      : p.cmd.kind === "temp" ? {mode: "temp", temp: v.k, bright: v.b || 100} : {mode: "scene", scene: v};
+    cmd(p.cmd.kind, v, patch);
+  });
+}
+function presetColor(p) {
+  const v = p.cmd.value;
+  return p.cmd.kind === "hsv" ? css(hsvRgb(v.h, v.s)) : p.cmd.kind === "temp" ? css(kRgb(v.k)) : SCENES[v]?.[2] || "#ffb35c";
+}
+$("psave").onclick = async () => {
+  const l = shown();
+  if (!l?.on) return toast("Сначала включите лампу и настройте свет", true);
+  const c = l.mode === "hsv" ? {kind: "hsv", value: {h: l.hsv.h, s: l.hsv.s, b: l.bright}} : l.mode === "temp" ? {kind: "temp", value: {k: l.temp, b: l.bright}} : {kind: "scene", value: l.scene};
+  try { S = await api("/api/presets", {op: "add", name: $("pname").value || "Пресет", cmd: c}); $("pname").value = ""; haptic.ok(); draw(); toast("Пресет сохранён"); }
+  catch (e) { toast(e.message, true); }
+};
+async function delPreset(id) {
+  try { S = await api("/api/presets", {op: "delete", id}); haptic.pick(); draw(); } catch (e) { toast(e.message, true); }
+}
+
+// ---------- вкладка «Режимы» ----------
+let editing = null;   // будильник в редакторе: {id?, time, days, minutes, lamps}
+function drawModes() {
+  if (tab !== "modes") return;
+  drawCirc(); drawDawn(); drawTimer();
+}
+
+function chartSvg(c) {
+  const W = 320, H = 110, top = 8, bot = 92;
+  const lo = Math.min(c.night, c.day) - 300, hi = Math.max(c.night, c.day) + 300;
+  const x = m => m / 1440 * W, y = k => bot - (k - lo) / (hi - lo) * (bot - top);
+  const pts = c.curve.map(([m, k]) => `${x(m).toFixed(1)},${y(k).toFixed(1)}`).join(" ");
+  const stops = c.curve.filter((_, i) => i % 6 === 0).map(([m, k]) => `<stop offset="${(m / 1440).toFixed(3)}" stop-color="${css(kRgb(k))}"/>`).join("");
+  const nowM = (S.now / 6e4 + 180) % 1440, nowK = c.curve.reduce((a, p) => Math.abs(p[0] - nowM) < Math.abs(a[0] - nowM) ? p : a)[1];
+  const hours = [0, 6, 12, 18, 24].map(h => `<text x="${x(h * 60)}" y="${H - 2}" text-anchor="${h === 0 ? "start" : h === 24 ? "end" : "middle"}">${String(h).padStart(2, "0")}:00</text>`).join("");
+  const sun = (m, t) => `<g transform="translate(${x(m)},${bot})"><line y1="0" y2="-${bot - top}" stroke="var(--line)" stroke-dasharray="2 3"/><text y="-${bot - top + 2}" text-anchor="middle">${t} ${hmMin(m)}</text></g>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}"  aria-label="Температура света на сутки">
+    <defs><linearGradient id="cg" x1="0" x2="1">${stops}</linearGradient></defs>
+    <polygon points="0,${bot} ${pts} ${W},${bot}" fill="url(#cg)" opacity=".85"/>
+    <polyline points="${pts}" fill="none" stroke="color-mix(in srgb, var(--text) 35%, transparent)" stroke-width="1.2"/>
+    ${sun(c.sun.rise, "↑")}${sun(c.sun.set, "↓")}
+    <line x1="${x(nowM)}" x2="${x(nowM)}" y1="${top - 2}" y2="${bot}" stroke="var(--text)" stroke-width="1.5"/>
+    <circle cx="${x(nowM)}" cy="${y(nowK)}" r="4.5" fill="var(--bg)" stroke="var(--text)" stroke-width="2"/>
+    ${hours}</svg>`;
+}
+
+function drawCirc() {
+  const c = S.circ, box = $("circcard");
+  const paused = (S.lamps || []).filter(l => l.paused);
+  box.innerHTML = `<div class="row"><div><div class="ttl">Циркадный свет</div><div class="hint">${c.enabled ? `Сейчас ${c.k} K · яркость 100%` : "Тёплый ночью, дневной днём — по солнцу Минска"}</div></div>
+    <button type="button" class="sw${c.enabled ? " on" : ""}" id="circsw" aria-label="Циркадный"></button></div>
+    ${chartSvg(c)}
+    <div class="hint">Восход ${hmMin(c.sun.rise)}, закат ${hmMin(c.sun.set)}. Меняет только включённые лампы. Ручная настройка ставит его на паузу до утра.</div>
+    ${c.enabled && paused.length ? `<div class="row" style="margin-top:10px"><span class="hint">На паузе: ${esc(paused.map(l => l.name).join(", "))}</span><button class="btn" type="button" id="circres" style="white-space:nowrap">Вернуть</button></div>` : ""}
+    <div class="steppers">
+      ${stepper("night", "Ночью", c.night, " K")}${stepper("day", "Днём", c.day, " K")}${stepper("transition", "Переход", c.transition, " мин")}
+    </div>`;
+  $("circsw").onclick = () => saveCirc({enabled: !c.enabled}, true);
+  if ($("circres")) $("circres").onclick = resume;
+  box.querySelectorAll(".stepper button").forEach(b => b.onclick = () => {
+    const f = b.dataset.f, step = f === "transition" ? 15 : 100, lim = f === "transition" ? [15, 240] : [1500, 9000];
+    S.circ[f] = Math.min(lim[1], Math.max(lim[0], S.circ[f] + step * +b.dataset.d));
+    haptic.pick();
+    box.querySelector(`[data-v="${f}"]`).textContent = S.circ[f] + (f === "transition" ? " мин" : " K");
+    clearTimeout(drawCirc.t);
+    drawCirc.t = setTimeout(() => saveCirc({[f]: S.circ[f]}), 700);
+  });
+}
+const stepper = (f, label, v, unit) => `<div class="stepper"><small>${label}</small><div class="v"><button type="button" data-f="${f}" data-d="-1" aria-label="Меньше">−</button><span data-v="${f}">${v}${unit}</span><button type="button" data-f="${f}" data-d="1" aria-label="Больше">+</button></div></div>`;
+async function saveCirc(patch, tap) {
+  if (tap) haptic.tap();
+  try { S = await api("/api/settings", {circ: {...S.circ, ...patch}}); draw(); if ("enabled" in patch) toast(patch.enabled ? "Циркадный включён" : "Циркадный выключен"); }
+  catch (e) { toast(e.message, true); load(); }
+}
+
+function daysText(m) {
+  if (m === 127) return "каждый день";
+  if (m === 31) return "по будням";
+  if (m === 96) return "по выходным";
+  return DAYS.filter((_, i) => m >> i & 1).join(", ") || "не повторяется";
+}
+
+function drawDawn() {
+  const box = $("dawncard"), list = S.alarms || [];
+  box.innerHTML = `<div class="row"><div><div class="ttl">Рассвет под будильник</div><div class="hint">Лампы плавно разгораются от тёплого тусклого до дневного</div></div></div>
+    <div id="alarms">${list.map(a => `<div class="alarm"><div class="tm" data-edit="${a.id}">${a.time}</div>
+      <div class="grow" data-edit="${a.id}"><div style="font-size:14px">${daysText(a.days)}</div><div class="hint">${a.minutes} мин рассвета${a.lamps.length === 1 ? " · " + esc(S.names[a.lamps[0]]) : ""}${a.next ? "" : ""}</div></div>
+      <button type="button" class="sw${a.enabled ? " on" : ""}" data-tog="${a.id}" aria-label="Включить будильник"></button></div>`).join("")}</div>
+    ${editing ? editorHtml() : `<button class="btn ghost" type="button" id="addalarm" style="margin-top:10px;width:100%">+ Будильник</button>`}`;
+  box.querySelectorAll("[data-edit]").forEach(el => el.onclick = () => { editing = {...list.find(a => a.id === +el.dataset.edit)}; haptic.pick(); drawDawn(); });
+  box.querySelectorAll("[data-tog]").forEach(el => el.onclick = () => {
+    const a = list.find(x => x.id === +el.dataset.tog); haptic.tap();
+    saveAlarm({...a, enabled: !a.enabled});
+  });
+  if ($("addalarm")) $("addalarm").onclick = () => { editing = {time: "07:30", days: 31, minutes: 30, lamps: [0, 1], enabled: true}; haptic.pick(); drawDawn(); };
+  if (editing) bindEditor();
+}
+function editorHtml() {
+  const e = editing;
+  return `<div class="editor">
+    <div class="row"><input type="time" id="atime" value="${e.time}"><div class="chips">${[20, 25, 30].map(m => `<button type="button" class="chip${e.minutes === m ? " on" : ""}" data-min="${m}">${m} мин</button>`).join("")}</div></div>
+    <div class="days">${DAYS.map((d, i) => `<button type="button" data-day="${i}" class="${e.days >> i & 1 ? "on" : ""}">${d}</button>`).join("")}</div>
+    <div class="chips">${[["both", "Обе лампы"], [0, S.names[0]], [1, S.names[1]]].map(([k, n]) => {
+      const on = k === "both" ? e.lamps.length === 2 : e.lamps.length === 1 && e.lamps[0] === k;
+      return `<button type="button" class="chip${on ? " on" : ""}" data-lamp="${k}">${esc(n)}</button>`; }).join("")}</div>
+    <div class="row"><button class="btn" type="button" id="asave">Сохранить</button>
+      <span>${e.id ? `<button class="btn danger" type="button" id="adel">Удалить</button>` : ""}<button class="btn ghost" type="button" id="acancel" style="margin-left:12px">Отмена</button></span></div>
+  </div>`;
+}
+function bindEditor() {
+  const box = $("dawncard");
+  $("atime").onchange = e => { editing.time = e.target.value; };
+  box.querySelectorAll("[data-min]").forEach(b => b.onclick = () => { editing.minutes = +b.dataset.min; haptic.pick(); drawDawn(); });
+  box.querySelectorAll("[data-day]").forEach(b => b.onclick = () => { editing.days ^= 1 << +b.dataset.day; haptic.pick(); drawDawn(); });
+  box.querySelectorAll("[data-lamp]").forEach(b => b.onclick = () => { editing.lamps = b.dataset.lamp === "both" ? [0, 1] : [+b.dataset.lamp]; haptic.pick(); drawDawn(); });
+  $("asave").onclick = () => { editing.time = $("atime").value || editing.time; if (!editing.days) return toast("Выберите хотя бы один день", true); saveAlarm(editing, true); };
+  $("acancel").onclick = () => { editing = null; drawDawn(); };
+  if ($("adel")) $("adel").onclick = async () => {
+    try { S = await api("/api/alarms", {op: "delete", id: editing.id}); editing = null; haptic.ok(); draw(); } catch (e) { toast(e.message, true); }
+  };
+}
+async function saveAlarm(a, close) {
+  try {
+    S = await api("/api/alarms", {alarm: a});
+    if (close) editing = null;
+    haptic.ok(); draw();
+    const next = S.alarms.map(x => x.next).filter(Boolean).sort()[0];
+    if (close && next) toast(`Рассвет начнётся до ${hm(next)} ${dayOf(next)}`);
+  } catch (e) { toast(e.message, true); }
+}
+function dayOf(ms) {
+  const d = Math.floor((ms + 3 * 3600e3) / 864e5) - Math.floor((S.now + 3 * 3600e3) / 864e5);
+  return d === 0 ? "сегодня" : d === 1 ? "завтра" : DAYS[(new Date(ms + 3 * 3600e3).getUTCDay() + 6) % 7];
+}
+
+function drawTimer() {
+  const box = $("timercard"), t = S.timer;
+  if (t) {
+    const left = Math.max(0, t.end - Date.now()), p = 1 - left / (t.end - t.start);
+    box.innerHTML = `<div class="row"><div><div class="ttl">Таймер засыпания</div><div class="hint">Выключу в ${hm(t.end)} · осталось ${Math.ceil(left / 6e4)} мин</div></div>
+      <button class="btn ghost" type="button" id="tcancel">Отменить</button></div><div class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></div>
+      <div class="hint">Яркость плавно снижается, в конце — «Ночник», затем лампы гаснут.</div>`;
+    $("tcancel").onclick = () => setTimer({cancel: true});
+  } else {
+    box.innerHTML = `<div class="ttl">Таймер засыпания</div><div class="hint">Плавно гасит ${target === "both" ? "обе лампы" : esc(S.names[target])}: яркость вниз, потом «Ночник», потом выключение</div>
+      <div class="timers">${[15, 30, 60].map(m => `<button type="button" data-m="${m}">${m} мин</button>`).join("")}</div>`;
+    box.querySelectorAll("[data-m]").forEach(b => b.onclick = () => setTimer({minutes: +b.dataset.m, lamps: ids()}));
+  }
+}
+async function setTimer(body) {
+  haptic.tap();
+  try { S = await api("/api/timer", body); draw(); toast(body.cancel ? "Таймер отменён" : `Таймер на ${body.minutes} мин`); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ---------- темы: авто (как в Telegram), светлая, тёмная, «Котики» и «Под цвет ламп» ----------
+const THEMES = [["auto", "Авто"], ["light", "Светлая"], ["dark", "Тёмная"], ["pink", "Котики"], ["lamp", "Под цвет ламп"]];
+const COLORS = {light: "#ffffff", dark: "#0e0e10", pink: "#fff1f7", lamp: "#0d0d10"};
+let theme = "auto";
+function applyTheme(t) {
+  theme = t;
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = t;
+  $("title").textContent = t === "pink" ? "Мур-свет" : "Светокот";
+  try {
+    if (tg?.isVersionAtLeast?.("6.1")) {
+      tg.setHeaderColor(COLORS[t] || "bg_color");
+      tg.setBackgroundColor(COLORS[t] || "bg_color");
+    }
+  } catch {}
+  if (t === "lamp") applyLampTheme();
+  drawThemes();
+}
+// Акцент — цвет ламп, но не темнее, чем нужно для читаемости на тёмном фоне.
+function applyLampTheme() {
+  const rgb = lampRgb(shown()) || [255, 196, 120];
+  const lum = (.299 * rgb[0] + .587 * rgb[1] + .114 * rgb[2]) / 255;
+  const lift = lum < .45 ? rgb.map(x => Math.round(x + (255 - x) * (.45 - lum))) : rgb;
+  document.documentElement.style.setProperty("--glow", css(lift));
+}
+function drawThemes() {
+  const box = $("themes");
+  box.innerHTML = "";
+  for (const [k, name] of THEMES) {
+    const c = document.createElement("div");
+    c.className = "opt" + (theme === k ? " on" : ""); c.textContent = name;
+    c.onclick = e => { e.stopPropagation(); applyTheme(k); store.set("theme", k); haptic.pick(); closeThemes(); };
+    box.appendChild(c);
+  }
+}
+const closeThemes = () => $("themes").classList.add("closed");
+$("themebtn").onclick = e => { e.stopPropagation(); $("themes").classList.toggle("closed"); };
+document.addEventListener("click", e => { if (!$("themes").contains(e.target)) closeThemes(); });
+
+// ---------- настройки: имена ламп и доступ ----------
+$("gear").onclick = openSettings;
+async function openSettings() {
+  haptic.pick();
+  $("main").hidden = true; $("settings").hidden = false;
+  tg?.BackButton?.show();
+  let users = null, uerr = "";
+  if (S.me.owner) { try { users = (await api("/api/users", {op: "list"})).users; } catch (e) { uerr = e.message; } }
+  drawSettings(users, uerr);
+}
+function closeSettings() {
+  $("settings").hidden = true; $("main").hidden = false;
+  tg?.BackButton?.hide(); draw();
+}
+tg?.BackButton?.onClick(closeSettings);
+function drawSettings(users, uerr) {
+  const box = $("settings");
+  box.innerHTML = `<div class="head"><button class="back" type="button" id="sback">‹ Назад</button></div>
+    <h1 style="margin-bottom:6px">Настройки</h1>
+    <h2>Названия ламп</h2>
+    <div class="card" style="padding:4px 14px">${S.names.map((n, i) => `<div class="field"><span class="hint" style="width:70px">Лампа ${i + 1}</span><input data-name="${i}" value="${esc(n)}" maxlength="24"></div>`).join("")}</div>
+    <div class="hint" style="margin-top:6px">Только для пульта: в Яндексе лампы называются по-прежнему.</div>
+    ${S.me.owner ? `<h2>Доступ к лампам</h2>
+    <div class="card">${uerr ? `<div class="hint">${esc(uerr)}</div>` : ""}
+      <div class="user"><div class="grow">${esc(S.me.name || "Вы")}<div class="hint">владелец</div></div></div>
+      ${(users || []).map(u => `<div class="user"><div class="grow">${esc(u.name || "Без имени")}<div class="hint">id ${u.id}</div></div><button class="btn danger" type="button" data-rm="${u.id}">Убрать</button></div>`).join("")}
+      <div class="save"><input id="uid" inputmode="numeric" placeholder="Telegram id"><input id="uname" placeholder="Имя"><button class="btn" type="button" id="uadd">Добавить</button></div>
+      <div class="hint" style="margin-top:8px">Проще всего — переслать боту любое сообщение человека или его контакт: бот предложит дать доступ.</div>
+    </div>` : ""}`;
+  $("sback").onclick = closeSettings;
+  box.querySelectorAll("[data-name]").forEach(inp => inp.onchange = async () => {
+    const names = [...box.querySelectorAll("[data-name]")].map(x => x.value);
+    try { S = await api("/api/settings", {names}); haptic.ok(); toast("Сохранено"); } catch (e) { toast(e.message, true); }
+  });
+  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+    try { drawSettings((await api("/api/users", {op: "remove", id: +b.dataset.rm})).users); haptic.ok(); } catch (e) { toast(e.message, true); }
+  });
+  if ($("uadd")) $("uadd").onclick = async () => {
+    try { drawSettings((await api("/api/users", {op: "add", id: $("uid").value.trim(), name: $("uname").value.trim()})).users); haptic.ok(); toast("Доступ выдан"); }
+    catch (e) { toast(e.message, true); }
+  };
+}
+
+// ---------- запуск ----------
+(async () => {
+  const [t, tb] = await Promise.all([store.get("theme"), store.get("tab")]);
+  applyTheme(THEMES.some(x => x[0] === t) ? t : "auto");
+  if (TABS.some(x => x[0] === tb)) tab = tb;
+  drawTabs();
+  await load();
+})();
+// пока пульт открыт, подтягиваем состояние: лампы могли переключить Алисой
+setInterval(() => { if (!document.hidden && !busy && !dragging && !$("main").hidden && S?.lamps) load(); }, 12000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S) load(true); });
+window.addEventListener("resize", () => { if (tab === "color") { paintWheel(); placeKnob(); } });
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <radialGradient id="glow" cx="20%" cy="45%" r="45%">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#ffb347" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="#24224a"/>
+  <rect width="640" height="360" fill="url(#glow)"/>
+  <g transform="translate(40 52) scale(.42)">
+    <path d="M196 196 L206 92 L286 150 Z M444 196 L434 92 L354 150 Z" fill="#ffd27a" stroke="#ffffff" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M320 112c-104 0-176 74-176 166 0 60 30 100 62 134 22 24 34 46 34 72v18h160v-18c0-26 12-48 34-72 32-34 62-74 62-134 0-92-72-166-176-166z"
+          fill="#ffd27a" stroke="#ffffff" stroke-width="26" stroke-linejoin="round"/>
+    <ellipse cx="268" cy="276" rx="16" ry="20" fill="#24224a"/>
+    <ellipse cx="372" cy="276" rx="16" ry="20" fill="#24224a"/>
+    <path d="M308 316 L320 328 L332 316 Z" fill="#ff7a59"/>
+    <path d="M320 328 q-12 18 -28 8 M320 328 q12 18 28 8" fill="none" stroke="#24224a" stroke-width="8" stroke-linecap="round"/>
+    <g fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round"><path d="M256 544 H384"/><path d="M268 580 H372"/></g>
+  </g>
+  <text x="300" y="160" font-family="Helvetica Neue, Arial, sans-serif" font-size="48" font-weight="700" fill="#ffffff">Светокот</text>
+  <text x="302" y="204" font-family="Helvetica Neue, Arial, sans-serif" font-size="23" fill="#ffe2ad">Пульт для ламп в спальне:</text>
+  <text x="302" y="236" font-family="Helvetica Neue, Arial, sans-serif" font-size="23" fill="#ffe2ad">цвет, ночник, свет по солнцу</text>
+</svg>

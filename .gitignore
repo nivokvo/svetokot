@@ -1,0 +1,9 @@
+# секреты и локальное
+.dev.vars
+.env
+*.token
+secrets.env
+node_modules/
+.wrangler/
+circadian.log
+.DS_Store
