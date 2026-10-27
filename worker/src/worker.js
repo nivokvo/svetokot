@@ -395,6 +395,8 @@ async function onButton(q, env) {
       await usersApi(env, {op: "add", id, name});
       await kvSet(env, `pending:${id}`, null);
       text = "Доступ выдан";
+      // человек уже писал боту (/start) — сразу присылаем ему пульт; если не писал, Telegram не даст отправить, и это не ошибка
+      await tg(env, "sendMessage", {chat_id: id, reply_markup: startKb(env), text: "Вам открыли доступ к лампам в спальне. Пульт — кнопкой ниже или в меню бота."}).catch(() => {});
       await tg(env, "editMessageText", {chat_id: q.message.chat.id, message_id: q.message.message_id, parse_mode: "HTML",
         text: `<b>${esc(name || id)}</b> теперь может управлять лампами. Пусть напишет боту /start.`});
     } else {
