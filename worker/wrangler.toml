@@ -10,7 +10,7 @@ crons = ["* * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "lamps-bot"
-database_id = "00000000-0000-0000-0000-000000000000"  # заменить на id из `npx wrangler d1 create lamps-bot`
+database_id = "aaa4434c-cf31-4892-b69f-9c1edf5b710f"
 
 [[rules]]
 type = "Text"
