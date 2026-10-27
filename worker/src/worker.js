@@ -355,7 +355,17 @@ const startKb = env => ({inline_keyboard: [
 async function onUpdate(u, env) {
   if (u.callback_query) return onButton(u.callback_query, env);
   const m = u.message;
-  if (!m?.from || m.chat.type !== "private" || !await allowed(env, m.from.id)) return;  // чужим не отвечаем
+  if (!m?.from || m.chat.type !== "private") return;
+  if (!await allowed(env, m.from.id)) {
+    // чужим не отвечаем, но на /start владелец получает кнопку «Дать доступ» (один раз на человека)
+    if (/^\/start/.test(m.text || "") && await kvGet(env, `pending:${m.from.id}`, null) == null) {
+      const name = [m.from.first_name, m.from.last_name].filter(Boolean).join(" ") + (m.from.username ? ` (@${m.from.username})` : "");
+      await kvSet(env, `pending:${m.from.id}`, name);
+      await tg(env, "sendMessage", {chat_id: env.OWNER_ID, parse_mode: "HTML", text: `<b>${esc(name)}</b> просит доступ к лампам.`,
+        reply_markup: {inline_keyboard: [[{text: "Дать доступ", callback_data: `add:${m.from.id}`}]]}});
+    }
+    return;
+  }
   const owner = isOwner(env, m.from.id);
   // владелец пересылает сообщение человека или его контакт — предлагаем дать доступ
   const who = m.contact?.user_id ? {id: m.contact.user_id, name: [m.contact.first_name, m.contact.last_name].filter(Boolean).join(" ")}
