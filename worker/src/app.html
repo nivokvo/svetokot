@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Светокот</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <style>
 :root {
   --bg: var(--tg-theme-bg-color, #fff);
@@ -146,11 +148,11 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
 .ttl { font-weight: 600; font-size: 16px; }
 .chart { width: 100%; height: auto; display: block; margin: 12px 0 6px; overflow: visible; }
 .chart text { fill: var(--hint); font-size: 10px; }
-.steppers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.steppers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
 .stepper { background: var(--card2); border-radius: 12px; padding: 8px 4px; text-align: center; }
 .stepper small { display: block; color: var(--hint); font-size: 11px; }
 .stepper .v { display: flex; align-items: center; justify-content: space-between; gap: 2px; font-weight: 600; font-size: 14px; }
-.stepper span { white-space: nowrap; font-size: 13px; }
+.stepper span { white-space: nowrap; font-size: 12px; }
 .stepper button { border: 0; background: none; color: var(--accent); width: 24px; height: 28px; font-size: 20px; cursor: pointer; padding: 0; flex: 0 0 auto; }
 .alarm { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
 .alarm + .alarm { border-top: 1px solid var(--line); }
@@ -175,6 +177,21 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
 .user .grow { flex: 1; min-width: 0; }
 .back { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 4px 0; font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
 
+/* шторка: окна режимов, сцен и тем поверх любой раскладки */
+.sheet { position: fixed; inset: 0; z-index: 25; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.35);
+         animation: fade .2s ease-out; }
+.sheet[hidden] { display: none; }
+.sheet-card { width: 100%; max-width: 560px; max-height: 86vh; overflow-y: auto; background: var(--bg); border-radius: 22px 22px 0 0;
+              padding: 6px 16px 28px; animation: rise .32s cubic-bezier(.2,.9,.3,1.1); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 2; }
+.sheet-head b { font-size: 17px; }
+.sheet-x { border: 0; background: var(--card); width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; color: var(--hint); }
+.sheet .pane { display: block; padding: 0; }
+.opts { display: grid; gap: 6px; }
+.opts button { border: 0; border-radius: 14px; background: var(--card); padding: 14px; text-align: left; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; }
+.opts button.on { box-shadow: inset 0 0 0 2px var(--accent); }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { transform: translateY(40%); opacity: .4; } }
 .problem { text-align: center; padding: 28px 18px; }
 .problem b { display: block; font-size: 17px; margin-bottom: 6px; }
 .toast { position: fixed; left: 50%; top: 12px; transform: translate(-50%, -200%); visibility: hidden; background: var(--text); color: var(--bg);
@@ -262,7 +279,9 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
   </div>
 </div>
 
+<div id="special" hidden></div>
 <div id="settings" hidden></div>
+<div class="sheet" id="sheet" hidden><div class="sheet-card" id="sheet-card"><div class="sheet-head"><b id="sheet-title"></b><button class="sheet-x" id="sheet-x" type="button" aria-label="Закрыть">×</button></div><div id="sheet-body"></div></div></div>
 
 <script>
 const tg = window.Telegram?.WebApp;
@@ -362,6 +381,7 @@ async function load(fresh) {
 }
 
 function problem(title, text) {
+  $("special").hidden = true; $("main").hidden = false;
   $("main").innerHTML = `<div class="head"><h1>Светокот</h1></div><div class="card problem"><b>${esc(title)}</b><span class="hint">${esc(text)}</span>
     <div style="margin-top:16px"><button class="btn" onclick="location.reload()">Обновить</button></div></div>`;
 }
@@ -369,6 +389,7 @@ function problem(title, text) {
 // Команда лампам: сразу меняем картинку, потом отправляем. При ошибке — возвращаем как было.
 async function cmd(kind, value, patch) {
   const before = JSON.stringify(S.lamps);
+  if (kind === "on") sound.on(); else if (kind === "off") sound.off();
   for (const i of ids()) Object.assign(S.lamps[i], {on: kind !== "off"}, patch || {});
   if (kind !== "on" && kind !== "off") for (const i of ids()) S.lamps[i].paused = S.circ.enabled ? 1 : null;
   draw();
@@ -387,6 +408,7 @@ async function cmd(kind, value, patch) {
 // ---------- отрисовка ----------
 function draw() {
   if (!S) return;
+  if (special) { special.update(); if (modesOpen) drawModes(); if (scenesOpen) drawScenes(); return; }
   drawTarget(); drawBulb(); drawTabs();
   drawColor(); drawWhite(); drawScenes(); drawModes();
   if (theme === "lamp") applyLampTheme();
@@ -531,7 +553,7 @@ $("wb").onchange = e => { haptic.pick(); cmd("bright", +e.target.value, {bright:
 // ---------- вкладка «Сцены» ----------
 $("nightbtn").onclick = () => { haptic.tap(); cmd("night", null, {mode: "scene", scene: "candle"}); };
 function drawScenes() {
-  if (tab !== "scenes") return;
+  if (tab !== "scenes" && !scenesOpen) return;
   const l = shown(), cur = l?.on && l.mode === "scene" ? l.scene : null;
   $("nightbtn").classList.toggle("on", cur === "candle");
   $("scenes").innerHTML = (S.scenes || []).filter(s => s !== "candle" && SCENES[s]).map(s =>
@@ -568,7 +590,7 @@ async function delPreset(id) {
 // ---------- вкладка «Режимы» ----------
 let editing = null;   // будильник в редакторе: {id?, time, days, minutes, lamps}
 function drawModes() {
-  if (tab !== "modes") return;
+  if (tab !== "modes" && !modesOpen) return;
   drawCirc(); drawDawn(); drawTimer();
 }
 
@@ -700,10 +722,11 @@ async function setTimer(body) {
   catch (e) { toast(e.message, true); }
 }
 
-// ---------- темы: авто (как в Telegram), светлая, тёмная, «Котики» и «Под цвет ламп» ----------
-const THEMES = [["auto", "Авто"], ["light", "Светлая"], ["dark", "Тёмная"], ["pink", "Котики"], ["lamp", "Под цвет ламп"]];
-const COLORS = {light: "#ffffff", dark: "#0e0e10", pink: "#fff1f7", lamp: "#0d0d10"};
-let theme = "auto";
+// ---------- темы: обычные меняют цвета, особые (Y2K) подменяют раскладку целиком своим модулем ----------
+const THEMES = [["auto", "Авто"], ["light", "Светлая"], ["dark", "Тёмная"], ["pink", "Котики"], ["y2k", "Y2K"], ["lamp", "Под цвет ламп"]];
+const COLORS = {light: "#ffffff", dark: "#0e0e10", pink: "#fff1f7", lamp: "#0d0d10", y2k: "#030308"};
+const SPECIAL = {y2k: "/themes/y2k.js"};   // модуль экспортирует mount(App, root) → {update(), unmount()}
+let theme = "auto", special = null, specialName = null;
 function applyTheme(t) {
   theme = t;
   if (t === "auto") document.documentElement.removeAttribute("data-theme");
@@ -717,6 +740,27 @@ function applyTheme(t) {
   } catch {}
   if (t === "lamp") applyLampTheme();
   drawThemes();
+  setSpecial(t);
+}
+async function setSpecial(t) {
+  if (specialName === t) return;
+  if (special) { special.unmount(); special = null; }
+  specialName = null;
+  const url = SPECIAL[t];
+  $("special").hidden = !url; $("main").hidden = !!url;
+  if (!url) { $("special").innerHTML = ""; draw(); return; }
+  specialName = t;
+  try {
+    const mod = await import(url);
+    if (theme !== t) return;
+    special = mod.mount(App, $("special"));
+    draw();
+  } catch (e) {
+    console.error(e);
+    specialName = null;
+    toast("Тема не загрузилась — проверьте интернет", true);
+    applyTheme("dark");
+  }
 }
 // Акцент — цвет ламп, но не темнее, чем нужно для читаемости на тёмном фоне.
 function applyLampTheme() {
@@ -731,26 +775,117 @@ function drawThemes() {
   for (const [k, name] of THEMES) {
     const c = document.createElement("div");
     c.className = "opt" + (theme === k ? " on" : ""); c.textContent = name;
-    c.onclick = e => { e.stopPropagation(); applyTheme(k); store.set("theme", k); haptic.pick(); closeThemes(); };
+    c.onclick = e => { e.stopPropagation(); pickTheme(k); closeThemes(); };
     box.appendChild(c);
   }
 }
+const pickTheme = k => { applyTheme(k); store.set("theme", k); haptic.pick(); sound.pick(); };
 const closeThemes = () => $("themes").classList.add("closed");
 $("themebtn").onclick = e => { e.stopPropagation(); $("themes").classList.toggle("closed"); };
 document.addEventListener("click", e => { if (!$("themes").contains(e.target)) closeThemes(); });
+
+// ---------- шторка: режимы, сцены и выбор темы в особых раскладках ----------
+let modesOpen = false, scenesOpen = false, sheetClose = null;
+function openSheet(title, node, onClose) {
+  closeSheet();
+  $("sheet-title").textContent = title;
+  $("sheet-body").innerHTML = "";
+  $("sheet-body").appendChild(node);
+  $("sheet").hidden = false;
+  sheetClose = onClose;
+  sound.pick();
+}
+function closeSheet() {
+  if ($("sheet").hidden) return;
+  $("sheet").hidden = true;
+  const f = sheetClose; sheetClose = null; f?.();
+}
+$("sheet-x").onclick = closeSheet;
+$("sheet").onclick = e => { if (e.target === $("sheet")) closeSheet(); };
+// панели «Режимы» и «Сцены» переезжают в шторку и возвращаются на место после закрытия
+function openPane(id, title) {
+  const pane = $(id), home = pane.parentNode, next = pane.nextSibling;
+  if (id === "p-modes") modesOpen = true; else scenesOpen = true;
+  openSheet(title, pane, () => { home.insertBefore(pane, next); modesOpen = scenesOpen = false; draw(); });
+  draw();
+}
+function openThemes() {
+  const box = document.createElement("div");
+  box.className = "opts";
+  box.innerHTML = THEMES.map(([k, n]) => `<button type="button" data-k="${k}" class="${theme === k ? "on" : ""}">${n}<span class="hint">${SPECIAL[k] ? "особая раскладка" : ""}</span></button>`).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => { closeSheet(); pickTheme(b.dataset.k); });
+  openSheet("Тема", box);
+}
+
+// ---------- звуки: короткие синтезированные щелчки и сигналы, выключаются в настройках ----------
+const sound = (() => {
+  let ctx = null, on = true;
+  const ac = () => {
+    try { ctx ||= new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); } catch { ctx = null; }
+    return ctx;
+  };
+  function tone(f1, f2, dur, type = "sine", vol = .05) {
+    const c = on && ac(); if (!c) return;
+    const o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  function noise(dur, vol, freq) {
+    const c = on && ac(); if (!c) return;
+    const b = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 2; g.gain.value = vol;
+    src.buffer = b; src.connect(f).connect(g).connect(c.destination); src.start();
+  }
+  return {
+    set enabled(v) { on = v; }, get enabled() { return on; },
+    tick: () => noise(.014, .5, 3800),
+    pick: () => tone(1500, 1500, .04, "square", .018),
+    on: () => { tone(520, 1040, .16, "sine", .06); tone(1560, 2080, .12, "triangle", .02); },
+    off: () => tone(800, 260, .2, "sine", .05),
+    glitch: () => { noise(.09, .35, 1200); tone(2400, 300, .09, "sawtooth", .012); },
+  };
+})();
+
+// ---------- общий интерфейс для модулей особых тем ----------
+async function scene(list) {   // list: [{lamps: [0], kind, value, patch}] — у каждой лампы свой цвет
+  const before = JSON.stringify(S.lamps);
+  for (const x of list) for (const i of x.lamps) Object.assign(S.lamps[i], {on: true}, x.patch, {paused: S.circ.enabled ? 1 : null});
+  draw();
+  busy++;
+  try {
+    const r = await api("/api/set", {multi: list.map(({lamps, kind, value}) => ({lamps, kind, value}))});
+    for (const l of r.lamps) Object.assign(S.lamps[l.idx], l, {paused: S.lamps[l.idx].paused});
+    if (S.circ.enabled) await load(); else draw();
+  } catch (e) { S.lamps = JSON.parse(before); draw(); toast(e.message, true); }
+  finally { busy--; }
+}
+const App = window.App = {
+  get S() { return S; }, get target() { return target; }, get theme() { return theme; },
+  setTarget(k) { target = k; haptic.pick(); sound.pick(); draw(); },
+  set dragging(v) { dragging = v; },
+  ids, shown, cmd, scene, api, load, toast, haptic, sound, resume, setTimer, store,
+  preview(patch) { for (const i of ids()) Object.assign(S.lamps[i], {on: true}, patch); special?.update(); },
+  lampRgb, kRgb, hsvRgb, css, esc, hm, SCENES,
+  openSettings, openModes: () => openPane("p-modes", "Режимы"), openScenes: () => openPane("p-scenes", "Сцены"), openThemes, closeSheet,
+};
 
 // ---------- настройки: имена ламп и доступ ----------
 $("gear").onclick = openSettings;
 async function openSettings() {
   haptic.pick();
-  $("main").hidden = true; $("settings").hidden = false;
+  closeSheet();
+  $("main").hidden = true; $("special").hidden = true; $("settings").hidden = false;
   tg?.BackButton?.show();
   let users = null, uerr = "";
   if (S.me.owner) { try { users = (await api("/api/users", {op: "list"})).users; } catch (e) { uerr = e.message; } }
   drawSettings(users, uerr);
 }
 function closeSettings() {
-  $("settings").hidden = true; $("main").hidden = false;
+  $("settings").hidden = true;
+  if (specialName) $("special").hidden = false; else $("main").hidden = false;
   tg?.BackButton?.hide(); draw();
 }
 tg?.BackButton?.onClick(closeSettings);
@@ -761,6 +896,8 @@ function drawSettings(users, uerr) {
     <h2>Названия ламп</h2>
     <div class="card" style="padding:4px 14px">${S.names.map((n, i) => `<div class="field"><span class="hint" style="width:70px">Лампа ${i + 1}</span><input data-name="${i}" value="${esc(n)}" maxlength="24"></div>`).join("")}</div>
     <div class="hint" style="margin-top:6px">Только для пульта: в Яндексе лампы называются по-прежнему.</div>
+    <h2>Звуки</h2>
+    <div class="card"><div class="row"><span>Щелчки и сигналы интерфейса</span><button type="button" class="sw${sound.enabled ? " on" : ""}" id="sndsw" aria-label="Звуки"></button></div></div>
     ${S.me.owner ? `<h2>Доступ к лампам</h2>
     <div class="card">${uerr ? `<div class="hint">${esc(uerr)}</div>` : ""}
       <div class="user"><div class="grow">${esc(S.me.name || "Вы")}<div class="hint">владелец</div></div></div>
@@ -769,6 +906,7 @@ function drawSettings(users, uerr) {
       <div class="hint" style="margin-top:8px">Проще всего — переслать боту любое сообщение человека или его контакт: бот предложит дать доступ.</div>
     </div>` : ""}`;
   $("sback").onclick = closeSettings;
+  $("sndsw").onclick = () => { sound.enabled = !sound.enabled; store.set("sound", sound.enabled ? "1" : "0"); $("sndsw").classList.toggle("on", sound.enabled); haptic.pick(); sound.pick(); };
   box.querySelectorAll("[data-name]").forEach(inp => inp.onchange = async () => {
     const names = [...box.querySelectorAll("[data-name]")].map(x => x.value);
     try { S = await api("/api/settings", {names}); haptic.ok(); toast("Сохранено"); } catch (e) { toast(e.message, true); }
@@ -784,14 +922,15 @@ function drawSettings(users, uerr) {
 
 // ---------- запуск ----------
 (async () => {
-  const [t, tb] = await Promise.all([store.get("theme"), store.get("tab")]);
+  const [t, tb, snd] = await Promise.all([store.get("theme"), store.get("tab"), store.get("sound")]);
+  sound.enabled = snd !== "0";
   applyTheme(THEMES.some(x => x[0] === t) ? t : "auto");
   if (TABS.some(x => x[0] === tb)) tab = tb;
   drawTabs();
   await load();
 })();
 // пока пульт открыт, подтягиваем состояние: лампы могли переключить Алисой
-setInterval(() => { if (!document.hidden && !busy && !dragging && !$("main").hidden && S?.lamps) load(); }, 12000);
+setInterval(() => { if (!document.hidden && !busy && !dragging && $("settings").hidden && S?.lamps) load(); }, 12000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S) load(true); });
 window.addEventListener("resize", () => { if (tab === "color") { paintWheel(); placeKnob(); } });
 </script>

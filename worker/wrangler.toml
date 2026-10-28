@@ -12,6 +12,10 @@ binding = "DB"
 database_name = "lamps-bot"
 database_id = "aaa4434c-cf31-4892-b69f-9c1edf5b710f"
 
+# модули особых тем (public/themes/*.js) отдаются как статика, без запуска воркера
+[assets]
+directory = "./public"
+
 [[rules]]
 type = "Text"
 globs = ["**/*.html"]

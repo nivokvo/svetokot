@@ -75,12 +75,15 @@ export function actionsFor(cmd) {
 const clamp = (x, a, b) => Math.min(b, Math.max(a, Number(x) || a));
 
 // Отправить команду на лампы ids. С env.DRY_RUN = "1" (локальная проверка) ничего не отправляет.
-export async function send(env, ids, cmd) {
-  const actions = actionsFor(cmd);
-  if (env.DRY_RUN === "1") { console.log("DRY_RUN", ids, JSON.stringify(actions)); patchCache(ids, cmd); return; }
-  const res = await call(env, "POST", "/devices/actions", {devices: ids.map(id => ({id, actions}))});
+export const send = (env, ids, cmd) => sendEach(env, [{ids, cmd}]);
+
+// Несколько команд одним запросом: у каждой лампы свои действия (фирменные сцены тем — разный цвет на двух лампах).
+export async function sendEach(env, list) {
+  const devices = list.flatMap(({ids, cmd}) => { const actions = actionsFor(cmd); return ids.map(id => ({id, actions})); });
+  if (env.DRY_RUN === "1") { console.log("DRY_RUN", JSON.stringify(devices)); for (const x of list) patchCache(x.ids, x.cmd); return; }
+  const res = await call(env, "POST", "/devices/actions", {devices});
   const bad = (res.devices || []).flatMap(d => (d.capabilities || []).map(c => c.state?.action_result).filter(r => r && r.status !== "DONE"));
-  patchCache(ids, cmd);
+  for (const x of list) patchCache(x.ids, x.cmd);
   if (bad.length) {
     const unreachable = bad.some(r => /UNREACHABLE|OFFLINE|NOT_FOUND/i.test(r.error_code || ""));
     throw new LampError(unreachable ? "Лампа не в сети: проверьте, что она включена в розетку." : "Лампа не выполнила команду. Попробуйте ещё раз.", "action");

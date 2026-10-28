@@ -3,7 +3,7 @@
 // а раз в минуту (cron) ведёт циркадный режим, рассвет под будильник и таймер засыпания.
 // Лампами управляет через API Яндекс Умного дома (src/yandex.js), время считает src/time.js.
 
-import {lamps, lampIds, send, forget, LampError, SCENES} from "./yandex.js";
+import {lamps, lampIds, send, sendEach, forget, LampError, SCENES} from "./yandex.js";
 import {minsk, sunTimes, circadianK, curve, nextSunrise, morningEnd, dawnAt, dawnLevel, nextAlarm, timerStep} from "./time.js";
 import {checkInitData, webhookSecret} from "./auth.js";
 import APP_HTML from "./app.html";
@@ -116,8 +116,8 @@ async function fullState(env, user, fresh = false) {
 
 // cmd от Mini App: {lamps: [0, 1], kind, value}. Ручная настройка ставит циркадный на паузу до утра.
 async function apiSet(env, body) {
-  const ids = pickIds(env, body.lamps);
-  await manual(env, ids, {kind: String(body.kind), value: body.value});
+  if (Array.isArray(body.multi)) await manualEach(env, body.multi.slice(0, 2).map(m => ({ids: pickIds(env, m.lamps), cmd: {kind: String(m.kind), value: m.value}})));
+  else await manual(env, pickIds(env, body.lamps), {kind: String(body.kind), value: body.value});
   return {lamps: (await lamps(env)).map((l, i) => ({...l, idx: i}))};
 }
 function pickIds(env, idx) {
@@ -149,6 +149,17 @@ async function manual(env, ids, cmd) {
     }
   }
   await kvSet(env, "circ", circ);
+}
+
+// Фирменная сцена темы: у каждой лампы свой цвет, одним запросом. Это ручная настройка — циркадный ждёт утра.
+async function manualEach(env, list) {
+  if (list.some(x => !["temp", "hsv", "scene", "night"].includes(x.cmd.kind))) throw new LampError("Сцена из цвета, белого или сцены Яндекса.");
+  await sendEach(env, list);
+  const now = Date.now(), circ = await kvGet(env, "circ", {}), {lat, lon} = coords(env), until = nextSunrise(now, lat, lon), ids = list.flatMap(x => x.ids);
+  circ.pause ||= {}; circ.sent ||= {};
+  for (const id of ids) { circ.pause[id] = until; delete circ.sent[id]; }
+  await kvSet(env, "circ", circ);
+  await skipDawn(env, ids, now);
 }
 
 function circKNow(env, s, now) {
