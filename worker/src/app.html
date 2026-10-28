@@ -384,23 +384,32 @@ function problem(title, text) {
     <div style="margin-top:16px"><button class="btn" onclick="location.reload()">Обновить</button></div></div>`;
 }
 
-// Команда лампам: сразу меняем картинку, потом отправляем. При ошибке — возвращаем как было.
+// Команда лампам: сразу меняем картинку, потом отправляем.
+// Пока одна команда в пути, новые не копятся: ждёт только последняя (крутили ползунок пять раз — уйдёт один запрос).
+let inflight = false, pending = null;
 async function cmd(kind, value, patch) {
-  const before = JSON.stringify(S.lamps);
   if (kind === "on") sound.on(); else if (kind === "off") sound.off();
   for (const i of ids()) Object.assign(S.lamps[i], {on: kind !== "off"}, patch || {});
   if (kind !== "on" && kind !== "off") for (const i of ids()) S.lamps[i].paused = S.circ.enabled ? 1 : null;
   draw();
-  busy++;
+  send({lamps: ids(), kind, value});
+}
+async function send(body) {
+  pending = body;
+  if (inflight) return;
+  inflight = true; busy++;
+  let needLoad = false;
   try {
-    const r = await api("/api/set", {lamps: ids(), kind, value});
-    for (const l of r.lamps) Object.assign(S.lamps[l.idx], l, {paused: S.lamps[l.idx].paused});
-    if (kind !== "on" && kind !== "off" && S.circ.enabled) await load();  // время конца паузы знает сервер
-    else draw();
-  } catch (e) {
-    S.lamps = JSON.parse(before); draw();
-    toast(e.message, true);
-  } finally { busy--; }
+    while (pending) {
+      const b = pending; pending = null;
+      try {
+        const r = await api("/api/set", b);
+        if (!pending) for (const l of r.lamps) Object.assign(S.lamps[l.idx], l, {paused: S.lamps[l.idx].paused});
+        if (b.multi || (b.kind !== "on" && b.kind !== "off")) needLoad = S.circ.enabled;  // время конца паузы знает сервер
+      } catch (e) { toast(e.message, true); needLoad = true; }
+    }
+  } finally { inflight = false; busy--; }
+  if (needLoad) await load(); else draw();
 }
 
 // ---------- отрисовка ----------
@@ -848,17 +857,10 @@ const sound = (() => {
 })();
 
 // ---------- общий интерфейс для модулей особых тем ----------
-async function scene(list) {   // list: [{lamps: [0], kind, value, patch}] — у каждой лампы свой цвет
-  const before = JSON.stringify(S.lamps);
+function scene(list) {   // list: [{lamps: [0], kind, value, patch}] — у каждой лампы свой цвет
   for (const x of list) for (const i of x.lamps) Object.assign(S.lamps[i], {on: true}, x.patch, {paused: S.circ.enabled ? 1 : null});
   draw();
-  busy++;
-  try {
-    const r = await api("/api/set", {multi: list.map(({lamps, kind, value}) => ({lamps, kind, value}))});
-    for (const l of r.lamps) Object.assign(S.lamps[l.idx], l, {paused: S.lamps[l.idx].paused});
-    if (S.circ.enabled) await load(); else draw();
-  } catch (e) { S.lamps = JSON.parse(before); draw(); toast(e.message, true); }
-  finally { busy--; }
+  send({multi: list.map(({lamps, kind, value}) => ({lamps, kind, value}))});
 }
 const App = window.App = {
   get S() { return S; }, get target() { return target; }, get theme() { return theme; },
