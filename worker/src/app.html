@@ -18,8 +18,12 @@
   --line: color-mix(in srgb, var(--hint) 22%, transparent);
   --glow: #ffd27a;
 }
-html[data-theme="light"] { --bg: #ffffff; --text: #111111; --hint: #8a8a8e; --accent: #2a7de1; --accent-text: #fff; --danger: #e5484d; }
-html[data-theme="dark"] { --bg: #0e0e10; --text: #f2f2f4; --hint: #8e8e93; --accent: #0a84ff; --accent-text: #fff; --danger: #ff6369; }
+/* Обычные темы (Авто, Светлая, Тёмная, Под цвет ламп): data-scheme ставит applyScheme, у особых тем его нет.
+   Светлая — белые карточки на тёплом сером, тёмная — графит; акцент один, лаймовый. */
+html[data-scheme="light"] { --bg: #ecebe7; --text: #151514; --hint: #8b8a85; --accent: #d8f45f; --accent-text: #151514; --danger: #e5484d;
+  --card: #ffffff; --card2: #f3f2ee; --line: rgba(20,20,18,.08); --ink: #151514; --ink-text: #ffffff; --shadow: 0 1px 2px rgba(20,20,18,.04), 0 8px 24px rgba(20,20,18,.05); }
+html[data-scheme="dark"] { --bg: #0b0b0c; --text: #f3f3ef; --hint: #85857f; --accent: #d4f55a; --accent-text: #0b0b0c; --danger: #ff6369;
+  --card: #171718; --card2: #222224; --line: rgba(255,255,255,.07); --ink: #f3f3ef; --ink-text: #0b0b0c; --shadow: none; }
 html[data-theme="pink"] { --bg: #fff1f7; --text: #5b2343; --hint: #b47494; --accent: #ff5fa2; --accent-text: #fff; --danger: #e0457b;
   --card: #ffe2ef; --card2: #ffd1e6; --line: #f6b8d3; }
 html[data-theme="pink"] body {
@@ -59,32 +63,105 @@ input { font: inherit; color: var(--text); }
 .seg button.on { background: var(--card2); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 html[data-theme="pink"] .seg button.on, html[data-theme="lamp"] .seg button.on { background: var(--accent); color: var(--accent-text); }
 
-/* лампочка */
-/* «сцена» — всегда тёмная, чтобы свечение было видно и в светлой теме */
-.hero { position: relative; display: flex; flex-direction: column; align-items: center; padding: 14px 12px 16px; margin-top: 12px;
-        border-radius: 22px; color: #f4f2ee; overflow: hidden;
-        background: radial-gradient(90% 70% at 50% 35%, color-mix(in srgb, var(--glow) calc(var(--halo, .9) * 26%), #16161b), #0c0c0f 75%); }
-html[data-theme="pink"] .hero { background: radial-gradient(90% 70% at 50% 35%, color-mix(in srgb, var(--glow) calc(var(--halo, .9) * 26%), #3a1730), #24101f 75%); overflow: visible; }
-.hero .status small { color: rgba(244,242,238,.6); }
-.bulbwrap { position: relative; width: 190px; height: 210px; cursor: pointer; user-select: none; -webkit-user-select: none; }
-.halo { position: absolute; left: 50%; top: 42%; width: 260px; height: 260px; transform: translate(-50%, -50%); border-radius: 50%;
-        background: radial-gradient(circle, var(--glow) 0%, color-mix(in srgb, var(--glow) 45%, transparent) 30%, transparent 68%);
-        opacity: var(--halo, .9); filter: blur(6px); transition: opacity .35s, background .35s; pointer-events: none; }
-.bulb { position: relative; width: 100%; height: 100%; transition: transform .15s; }
-.bulbwrap:active .bulb { transform: scale(.96); }
-.bulb .glass { transition: fill .35s; }
-.status { margin-top: 4px; font-size: 15px; font-weight: 500; text-align: center; min-height: 21px; }
-.status small { display: block; color: var(--hint); font-size: 13px; font-weight: 400; }
-.paused { margin-top: 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: rgba(244,242,238,.75);
-          background: rgba(255,255,255,.1); border-radius: 999px; padding: 5px 6px 5px 12px; }
-.paused button { border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-text); padding: 4px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.ears { display: none; }
-html[data-theme="pink"] .ears { display: inline; }
+/* ---------- главный экран обычных тем ---------- */
+.ttlbox { min-width: 0; }
+.sub { font-size: 13px; color: var(--hint); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 18px; }
+.sub .err { color: var(--danger); }
 
-.tabs { margin-top: 14px; position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--bg); }
-html[data-theme="lamp"] .tabs, html[data-theme="pink"] .tabs { background: transparent; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+/* карточки ламп: тап — выбрать, кнопка в углу — вкл/выкл сразу */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tile { position: relative; height: 96px; padding: 12px; border-radius: 24px; background: var(--card); box-shadow: var(--shadow);
+        display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; user-select: none; -webkit-user-select: none;
+        transition: background-color .25s, color .25s, transform .15s; }
+.tile:active { transform: scale(.97); }
+.tile.on { background: var(--accent); color: var(--accent-text); }
+.tile b { font-size: 15px; font-weight: 600; letter-spacing: -.2px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile small { font-size: 12px; line-height: 1.3; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.on small { color: color-mix(in srgb, var(--accent-text) 62%, transparent); }
+.dots { position: absolute; left: 12px; top: 12px; display: flex; }
+.tile { --tb: var(--card); --off: var(--card2); }
+.tile.on { --tb: var(--accent); --off: color-mix(in srgb, var(--accent-text) 9%, var(--accent)); }
+.dots i { width: 24px; height: 24px; border-radius: 50%; background: var(--off); transition: background .3s, box-shadow .3s; }
+.dots i + i { margin-left: -7px; box-shadow: 0 0 0 2px var(--tb); }
+.dots i.lit { background: radial-gradient(circle at 38% 34%, #fff 0, var(--c) 72%); box-shadow: 0 0 12px color-mix(in srgb, var(--c) 70%, transparent); }
+.dots i + i.lit { box-shadow: 0 0 0 2px var(--tb), 0 0 12px color-mix(in srgb, var(--c) 70%, transparent); }
+.tile .pw { position: absolute; right: 8px; top: 8px; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+            display: grid; place-items: center; background: var(--card2); color: var(--hint); transition: background .2s, color .2s; }
+.tile.lit .pw { background: var(--ink); color: var(--ink-text); }
+.tile.on .pw { background: rgba(0,0,0,.08); color: var(--accent-text); }
+.tile.on.lit .pw { background: var(--accent-text); color: var(--accent); }
+
+/* пульт: дуга яркости (тянуть по кругу, команда уходит, когда палец отпущен), в центре — вкл/выкл */
+.panel { margin-top: 10px; padding: 14px 12px 14px; border-radius: 30px; background: var(--card); box-shadow: var(--shadow); }
+.dial { --lc: transparent; position: relative; width: 220px; height: 220px; margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.dial > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.dtick { stroke: color-mix(in srgb, var(--hint) 45%, transparent); stroke-width: 1.4; stroke-linecap: round; }
+.dtick.major { stroke: var(--hint); stroke-width: 1.8; }
+.dtrack, .dval { fill: none; stroke-width: 14; stroke-linecap: round; }
+.dtrack { stroke: var(--card2); }
+.dval { stroke: var(--ink); transition: stroke .3s; }
+.dial.off .dval { stroke: color-mix(in srgb, var(--hint) 40%, transparent); }
+.dknob { fill: #fff; stroke: rgba(0,0,0,.06); filter: drop-shadow(0 2px 5px rgba(0,0,0,.28)); }
+.dknobc { fill: var(--lc); }
+.dial.off .dknobc { fill: var(--card2); }
+.dcore { position: absolute; left: 50%; top: 50%; width: 136px; height: 136px; transform: translate(-50%, -50%); border: 0; padding: 0; border-radius: 50%;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--text);
+         background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--lc) 42%, var(--card)) 0, color-mix(in srgb, var(--lc) 14%, var(--card)) 52%, var(--card) 71%);
+         overflow: hidden; transition: transform .15s, background .4s; }
+.dcore:active { transform: translate(-50%, -50%) scale(.96); }
+.dcore b { font-size: 50px; font-weight: 600; letter-spacing: -2.5px; line-height: 1; font-variant-numeric: tabular-nums; }
+.dcore b i { font-style: normal; font-size: 20px; font-weight: 500; letter-spacing: 0; margin-left: 2px; color: var(--hint); vertical-align: 22px; }
+.dcore .dmode { font-size: 12px; color: var(--hint); margin-bottom: 4px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcore .dlab { font-size: 12px; line-height: 1.3; color: var(--hint); margin-top: 5px; max-width: 104px; text-align: center; }
+.dcore b.offt { font-size: 40px; letter-spacing: -1.5px; color: color-mix(in srgb, var(--hint) 70%, transparent); }
+.dpw { position: absolute; left: 50%; bottom: -2px; width: 40px; height: 40px; margin-left: -20px; border: 0; padding: 0; border-radius: 50%; cursor: pointer;
+       display: grid; place-items: center; background: var(--ink); color: var(--ink-text); transition: background .2s, color .2s, transform .15s; }
+.dpw:active { transform: scale(.92); }
+.dial.off .dpw { background: var(--card2); color: var(--hint); }
+.dial.dead { opacity: .45; pointer-events: none; }
+
+/* оттенки белого в одно касание и вход в цвет */
+.tones { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; margin-top: 12px; }
+.tone { border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+        font-size: 11px; line-height: 1.2; color: var(--hint); white-space: nowrap; }
+.tone i { width: 38px; height: 38px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.07); transition: box-shadow .2s, transform .15s; }
+.tone:active i { transform: scale(.92); }
+.tone.on { color: var(--text); font-weight: 600; }
+.tone.on i { box-shadow: inset 0 0 0 1px rgba(0,0,0,.07), 0 0 0 2px var(--card), 0 0 0 4px var(--ink); }
+.tone.rainbow i { background: radial-gradient(circle, var(--c, #fff) 0 30%, transparent 31%),
+                  conic-gradient(from 90deg, #ff6b6b, #ffd36b, #b4f06b, #6bf0d8, #6b9cff, #c26bff, #ff6bc8, #ff6b6b); }
+
+/* сцены и пресеты лентой */
+.strip { display: flex; gap: 8px; overflow-x: auto; margin: 10px -16px 0; padding: 2px 16px 4px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.strip::-webkit-scrollbar { display: none; }
+.pill { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px 0 8px; border: 0; border-radius: 23px; cursor: pointer;
+        background: var(--card); box-shadow: var(--shadow); font-size: 14px; font-weight: 500; white-space: nowrap; transition: background .2s, color .2s, transform .15s; }
+.pill:active { transform: scale(.96); }
+.pill i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: 0 0 auto; }
+.pill.on { background: var(--ink); color: var(--ink-text); }
+.pill.candle i { background: linear-gradient(135deg, #3a2a4a, #ff9a3c); }
+.pill.more { padding: 0; width: 46px; justify-content: center; }
+.pill.more i { background: none; color: var(--text); }
+
+/* режимы двумя карточками: циркадный с переключателем, сон и рассвет */
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.mini { position: relative; min-height: 86px; padding: 14px; border-radius: 24px; background: var(--card); box-shadow: var(--shadow); cursor: pointer;
+        display: flex; flex-direction: column; justify-content: flex-end; user-select: none; -webkit-user-select: none; transition: transform .15s; }
+.mini:active { transform: scale(.98); }
+.mini .ic { position: absolute; left: 14px; top: 13px; display: grid; }
+.mini b { font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+.mini small { font-size: 12px; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini .sw { position: absolute; right: 12px; top: 12px; }
+.mini .ret { position: absolute; right: 10px; top: 10px; border: 0; border-radius: 999px; padding: 7px 11px; cursor: pointer;
+             background: var(--ink); color: var(--ink-text); font-size: 12px; font-weight: 600; }
+.mini .badge { position: absolute; right: 12px; top: 13px; font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px;
+               background: var(--accent); color: var(--accent-text); }
+
 .pane { display: none; padding-top: 6px; }
 .pane.on { display: block; }
+html[data-theme="pink"] .hero { background: radial-gradient(90% 70% at 50% 35%, color-mix(in srgb, var(--glow) calc(var(--halo, .9) * 26%), #3a1730), #24101f 75%); overflow: visible; }
+html[data-theme="pink"] .ears { display: inline; }
+html[data-theme="lamp"] .tabs, html[data-theme="pink"] .tabs { background: transparent; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .card { background: var(--card); border-radius: 16px; padding: 14px; }
 .card + .card { margin-top: 10px; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -199,6 +276,66 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
 .toast.show { transform: translate(-50%, 0); visibility: visible; }
 .skel { opacity: .5; animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .25; } }
+
+/* ---------- скин обычных тем для шапки, шторки, настроек и мелочей (особые темы красят их сами) ---------- */
+html[data-scheme] body { padding: 14px 16px 22px; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, "Segoe UI", Roboto, sans-serif; }
+html[data-scheme] .head { margin-bottom: 14px; }
+html[data-scheme] h1 { font-size: 26px; font-weight: 700; letter-spacing: -.7px; line-height: 1.1; }
+html[data-scheme] .roundbtn { width: 42px; height: 42px; background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+html[data-scheme] .themes { top: 50px; min-width: 210px; padding: 6px; border-radius: 22px; background: var(--card); box-shadow: 0 16px 40px rgba(0,0,0,.18); }
+html[data-scheme] .themes .opt { padding: 12px 14px; border-radius: 16px; }
+html[data-scheme] .themes .opt.on { color: var(--text); background: var(--card2); }
+html[data-scheme] .themes .opt.on::after { width: 9px; height: 9px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
+html[data-scheme] .seg { background: var(--card); border-radius: 16px; padding: 4px; box-shadow: var(--shadow); }
+html[data-scheme] .seg button { padding: 9px 4px; border-radius: 12px; font-weight: 600; }
+html[data-scheme] .seg button.on { background: var(--ink); color: var(--ink-text); box-shadow: none; }
+html[data-scheme] .card { border-radius: 24px; padding: 16px; box-shadow: var(--shadow); }
+html[data-scheme] .card + .card { margin-top: 8px; }
+html[data-scheme] h2 { font-size: 13px; font-weight: 600; margin: 22px 4px 8px; }
+html[data-scheme] .ttl { font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
+html[data-scheme] .chip { background: var(--card2); padding: 8px 13px; }
+html[data-scheme] .chip.on, html[data-scheme] .days button.on { background: var(--ink); color: var(--ink-text); }
+html[data-scheme] .btn { background: var(--ink); color: var(--ink-text); border-radius: 14px; padding: 10px 16px; }
+html[data-scheme] .btn.ghost { background: var(--card2); color: var(--text); }
+html[data-scheme] .btn.danger { background: none; color: var(--danger); }
+html[data-scheme] .sw { background: var(--card2); box-shadow: inset 0 0 0 1px var(--line); }
+html[data-scheme] .sw.on { background: var(--accent); box-shadow: none; }
+html[data-scheme] .sw.on::after { background: var(--accent-text); box-shadow: none; }
+html[data-scheme] .stepper { border-radius: 16px; padding: 8px 4px; }
+html[data-scheme] .stepper button { color: var(--text); }
+html[data-scheme] .timers button { border-radius: 16px; padding: 14px 0; }
+html[data-scheme] .bar i { background: var(--ink); }
+html[data-scheme] .editor input[type=time] { border-radius: 14px; }
+html[data-scheme] .alarm .tm { font-weight: 600; letter-spacing: -1px; }
+html[data-scheme] .night { border-radius: 24px; padding: 18px 16px; }
+html[data-scheme] .scene { border-radius: 20px; }
+html[data-scheme] .scene.on, html[data-scheme] .night.on { box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px var(--ink); }
+html[data-scheme] .preset { background: var(--card); box-shadow: var(--shadow); padding: 8px 9px 8px 11px; }
+html[data-scheme] .save input { background: var(--card); border-radius: 14px; padding: 10px 14px; }
+html[data-scheme] .card .save input { background: var(--card2); }
+html[data-scheme] input[type=range]::-webkit-slider-thumb { box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.25); }
+html[data-scheme] .wheelbox { width: min(240px, 66vw); margin: 4px auto 16px; }
+html[data-scheme] .swatches { margin-bottom: 0; }
+html[data-scheme] .swatches button { max-width: 32px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+html[data-theme="lamp"] .dval { stroke: var(--glow); }
+html[data-theme="lamp"] .dial.off .dval { stroke: color-mix(in srgb, var(--hint) 40%, transparent); }
+html[data-scheme] .toast { background: var(--ink); color: var(--ink-text); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+html[data-scheme] .toast.err { background: var(--danger); color: #fff; }
+html[data-scheme] .sheet { background: rgba(8,8,8,.34); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+html[data-scheme] .sheet-card { background: var(--bg); border-radius: 30px 30px 0 0; padding: 0 16px 28px; box-shadow: 0 -10px 40px rgba(0,0,0,.18); }
+html[data-scheme] .sheet-head { background: var(--bg); padding: 20px 0 12px; }
+html[data-scheme] .sheet-head::before { content: ""; position: absolute; left: 50%; top: 7px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px;
+  background: color-mix(in srgb, var(--hint) 45%, transparent); }
+html[data-scheme] .sheet-head b { font-size: 21px; font-weight: 700; letter-spacing: -.5px; }
+html[data-scheme] .sheet-x { width: 34px; height: 34px; background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+html[data-scheme] .opts button { background: var(--card); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); }
+html[data-scheme] .opts button.on { box-shadow: inset 0 0 0 2px var(--ink); }
+html[data-scheme] #p-light .seg { margin-bottom: 10px; }
+html[data-scheme] #settings .back { color: var(--text); font-weight: 600; background: var(--card); border-radius: 999px; padding: 8px 14px 8px 10px; box-shadow: var(--shadow); }
+html[data-scheme] #settings h1 { margin: 14px 0 4px !important; }
+html[data-scheme] #settings .card { padding-top: 6px; padding-bottom: 6px; }
+html[data-scheme] #settings .card .row { padding: 8px 0; }
+html[data-scheme] #settings .save { margin: 8px 0 8px; }
 </style>
 </head>
 <body>
@@ -206,7 +343,7 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
 
 <div id="main">
   <div class="head">
-    <h1 id="title">Светокот</h1>
+    <div class="ttlbox"><h1 id="title">Светокот</h1><div class="sub" id="status"><span class="skel">Загружаю…</span></div></div>
     <div class="hbtns">
       <button class="roundbtn" id="gear" type="button" aria-label="Настройки">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -218,47 +355,40 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
     <div class="themes closed" id="themes"></div>
   </div>
 
-  <div class="seg" id="target"></div>
+  <div class="tiles" id="target"></div>
 
-  <div class="hero" id="hero">
-    <div class="bulbwrap" id="bulb" role="button" aria-label="Включить или выключить">
-      <div class="halo" id="halo"></div>
-      <svg class="bulb" viewBox="0 0 190 210" aria-hidden="true">
-        <defs>
-          <radialGradient id="shine" cx="38%" cy="30%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".35" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-        </defs>
-        <g class="ears"><path d="M48 52 L52 14 L80 34 Z M142 52 L138 14 L110 34 Z" fill="#ffd1e6" stroke="#e86aa3" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M55 42 L57 24 L71 34 Z M135 42 L133 24 L119 34 Z" fill="#ff9cc8"/></g>
-        <path class="glass" id="glass" d="M95 18c-38 0-66 28-66 63 0 22 11 37 23 50 8 9 12 17 12 27v6h62v-6c0-10 4-18 12-27 12-13 23-28 23-50 0-35-28-63-66-63z"/>
-        <path d="M95 18c-38 0-66 28-66 63 0 22 11 37 23 50 8 9 12 17 12 27v6h62v-6c0-10 4-18 12-27 12-13 23-28 23-50 0-35-28-63-66-63z" fill="url(#shine)"/>
-        <path id="filament" d="M80 150 V118 l-8 -18 q8 -10 15 0 q8 -10 16 0 q7 -10 15 0 l-8 18 V150" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <g class="ears"><ellipse cx="80" cy="84" rx="4" ry="5" fill="#5b2343"/><ellipse cx="110" cy="84" rx="4" ry="5" fill="#5b2343"/>
-          <path d="M92 94 L95 97 L98 94 Z" fill="#ff5fa2"/></g>
-        <rect x="64" y="166" width="62" height="10" rx="5" fill="#b9b9c0"/>
-        <rect x="66" y="178" width="58" height="9" rx="4.5" fill="#a2a2aa"/>
-        <rect x="70" y="189" width="50" height="9" rx="4.5" fill="#8e8e96"/>
-        <path d="M84 200 h22 l-4 8 h-14 z" fill="#6f6f78"/>
+  <div class="panel">
+    <div class="dial off" id="dial">
+      <svg viewBox="0 0 240 240" aria-hidden="true">
+        <g id="dticks"></g>
+        <path class="dtrack" id="dtrack"/>
+        <path class="dval" id="dvalarc"/>
+        <circle class="dknob" id="dknob" r="13" cx="120" cy="20"/>
+        <circle class="dknobc" id="dknobc" r="5.5" cx="120" cy="20"/>
       </svg>
+      <button class="dcore" id="dcore" type="button" aria-label="Включить или выключить"></button>
+      <button class="dpw" id="dpw" type="button" aria-label="Включить или выключить"></button>
     </div>
-    <div class="status" id="status"><span class="skel">Загружаю…</span></div>
-    <div id="pausebox"></div>
+    <div class="tones" id="tones"></div>
   </div>
 
-  <div class="tabs"><div class="seg" id="tabs"></div></div>
+  <div class="strip" id="strip"></div>
 
-  <div class="pane" id="p-color">
-    <div class="card">
+  <div class="duo">
+    <div class="mini" id="m-circ" role="button"></div>
+    <div class="mini" id="m-modes" role="button"></div>
+  </div>
+
+  <!-- панели ниже открываются в шторке (openPane); особые темы берут оттуда сцены и режимы -->
+  <div class="pane" id="p-light">
+    <div class="seg" id="lseg"><button type="button" data-k="white">Белый</button><button type="button" data-k="color">Цвет</button></div>
+    <div class="card" id="l-white">
+      <div class="slider"><div class="row"><span>Температура</span><b id="tk-v">4000 K</b></div><input type="range" class="temp" id="tk" min="1500" max="9000" step="100" value="4000"></div>
+      <div class="chips" id="whites" style="margin-top:14px"></div>
+    </div>
+    <div class="card" id="l-color">
       <div class="wheelbox" id="wheelbox"><canvas id="wheel"></canvas><div class="knob" id="knob"></div></div>
       <div class="swatches" id="swatches"></div>
-      <div class="slider"><div class="row"><span>Яркость</span><b id="cb-v">100%</b></div><input type="range" id="cb" min="1" max="100" value="100"></div>
-    </div>
-  </div>
-
-  <div class="pane" id="p-white">
-    <div class="card">
-      <div class="slider"><div class="row"><span>Температура</span><b id="tk-v">4000 K</b></div><input type="range" class="temp" id="tk" min="1500" max="9000" step="100" value="4000"></div>
-      <div class="chips" id="whites" style="margin:12px 0 16px"></div>
-      <div class="slider"><div class="row"><span>Яркость</span><b id="wb-v">100%</b></div><input type="range" id="wb" min="1" max="100" value="100"></div>
     </div>
   </div>
 
@@ -361,7 +491,6 @@ function toast(text, err) {
 // ---------- состояние ----------
 let S = null;                 // ответ /api/state
 let target = "both";          // "both" | 0 | 1
-let tab = "white";
 let busy = 0, dragging = false;
 const ids = () => target === "both" ? [0, 1] : [target];
 const shown = () => {          // какую лампу показываем: выбранную или первую включённую из двух
@@ -415,75 +544,191 @@ async function send(body) {
 }
 
 // ---------- отрисовка ----------
+let lightOpen = false, lightTab = "white";
 function draw() {
   if (!S) return;
   if (special) { special.update(); if (modesOpen) drawModes(); if (scenesOpen) drawScenes(); return; }
-  drawTarget(); drawBulb(); drawTabs();
-  drawColor(); drawWhite(); drawScenes(); drawModes();
+  drawTarget(); drawLive(); drawStrip(); drawMinis();
+  if (lightOpen) drawLight();
+  if (scenesOpen) drawScenes();
+  if (modesOpen) drawModes();
   if (theme === "lamp") applyLampTheme();
 }
 
+const svg = (d, size = 18, w = 2) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON = {
+  power: '<path d="M12 3.5v8"/><path d="M6.6 7a7.6 7.6 0 1 0 10.8 0"/>',
+  moon: '<path d="M19.5 14.6A7.8 7.8 0 1 1 9.4 4.5a6.2 6.2 0 0 0 10.1 10.1z"/>',
+  sun: '<path d="M12 3v2.2M4.6 6.6l1.6 1.6M19.4 6.6l-1.6 1.6M2.5 14h2.2M19.3 14h2.2"/><path d="M7.2 17a4.8 4.8 0 0 1 9.6 0"/><path d="M3 20.5h18"/>',
+  alarm: '<circle cx="12" cy="13" r="7.5"/><path d="M12 9.3V13l2.6 1.6"/><path d="M4.2 5.2 7 3M19.8 5.2 17 3"/>',
+  grid: '<rect x="4" y="4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="2"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="2"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="2"/>',
+};
+const toneName = k => { const w = WHITES.find(([x]) => Math.abs(x - k) <= 150); return w ? w[1] : "Белый"; };
+const curBright = () => shown()?.bright || 100;
+
+// ---------- карточки ламп: «Лампа 1», «Лампа 2», «Обе» ----------
 function drawTarget() {
-  const box = $("target");
-  const opts = [["both", "Обе"], [0, S.names[0]], [1, S.names[1]]];
-  box.innerHTML = opts.map(([k, n]) => `<button type="button" data-k="${k}" class="${target === k ? "on" : ""}">${esc(n)}</button>`).join("");
-  box.querySelectorAll("button").forEach(b => b.onclick = () => {
-    target = b.dataset.k === "both" ? "both" : +b.dataset.k; haptic.pick(); draw();
+  const box = $("target"), L = S.lamps || [];
+  const tiles = [[0, S.names[0]], [1, S.names[1]], ["both", "Обе"]];
+  box.innerHTML = tiles.map(([k, n]) => {
+    const ls = k === "both" ? L : L[k] ? [L[k]] : [];
+    const lit = ls.some(l => l.on), one = ls[0];
+    const st = !ls.length ? "Нет данных" : ls.every(l => !l.online) ? "Не в сети"
+      : k === "both" ? (ls.every(l => l.on) ? "Обе горят" : lit ? "Горит одна" : "Выключены")
+      : !one.online ? "Не в сети" : !lit ? "Выключена" : one.mode === "scene" ? (SCENES[one.scene]?.[0] || "Сцена") : `${one.bright}%`;
+    const dots = (ls.length ? ls : [null]).map(l => { const rgb = lampRgb(l); return rgb ? `<i class="lit" style="--c:${css(rgb)}"></i>` : "<i></i>"; }).join("");
+    return `<div class="tile${target === k ? " on" : ""}${lit ? " lit" : ""}" data-k="${k}" role="button" tabindex="0" aria-pressed="${target === k}">
+      <span class="dots">${dots}</span>
+      <button type="button" class="pw" aria-label="${lit ? "Выключить" : "Включить"}: ${esc(n)}">${svg(ICON.power, 16, 2.4)}</button>
+      <b>${esc(n)}</b><small>${st}</small></div>`;
+  }).join("");
+  box.querySelectorAll(".tile").forEach(t => {
+    const k = t.dataset.k === "both" ? "both" : +t.dataset.k;
+    t.onclick = () => { if (target === k) return; target = k; haptic.pick(); sound.pick(); draw(); };
+    t.querySelector(".pw").onclick = e => { e.stopPropagation(); target = k; togglePower(); };
+  });
+}
+function togglePower() {
+  if (!S?.lamps) return;
+  haptic.tap();
+  cmd(ids().some(i => S.lamps[i].on) ? "off" : "on");
+}
+
+// ---------- дуга яркости: 270° с разрывом снизу, в разрыве — кнопка питания ----------
+const DC = 120, DR = 100, A0 = 135, SWEEP = 270;
+const polar = (a, r = DR) => [DC + r * Math.cos(a * Math.PI / 180), DC + r * Math.sin(a * Math.PI / 180)];
+const angleOf = v => A0 + SWEEP * (v - 1) / 99;
+function arcPath(a1, a2) {
+  const [x1, y1] = polar(a1), [x2, y2] = polar(a2 - a1 < .01 ? a1 + .01 : a2);
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${DR} ${DR} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+}
+$("dtrack").setAttribute("d", arcPath(A0, A0 + SWEEP));
+$("dticks").innerHTML = Array.from({length: 41}, (_, i) => {
+  const a = A0 + SWEEP * i / 40, major = i % 10 === 0, [x1, y1] = polar(a, 113), [x2, y2] = polar(a, major ? 120 : 117);
+  return `<line class="dtick${major ? " major" : ""}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+}).join("");
+let dialV = 100, dialDrag = false;
+function setDial(v) {
+  dialV = v;
+  const a = angleOf(v), [x, y] = polar(a);
+  $("dvalarc").setAttribute("d", arcPath(A0, a));
+  for (const id of ["dknob", "dknobc"]) { $(id).setAttribute("cx", x.toFixed(2)); $(id).setAttribute("cy", y.toFixed(2)); }
+  const n = $("dnum"); if (n) n.textContent = v;
+}
+
+// статус в шапке, пульт и оттенки — всё, что меняется, пока палец ведёт по дуге или кругу
+function drawLive() {
+  const dial = $("dial"), st = $("status");
+  if (!S.lamps) {
+    st.innerHTML = `<span class="err">${esc(S.lampsError || "Лампы недоступны")}</span>`;
+    dial.classList.add("off", "dead"); $("dcore").innerHTML = `<span class="dlab">Нет связи с лампами</span>`; setDial(1); return;
+  }
+  dial.classList.remove("dead");
+  const l = shown(), sel = ids().map(i => S.lamps[i]), anyOn = sel.some(x => x.on), rgb = anyOn ? lampRgb(l) : null;
+  if (rgb) document.documentElement.style.setProperty("--glow", css(rgb));
+  dial.style.setProperty("--lc", rgb ? css(rgb) : "transparent");
+  dial.classList.toggle("off", !anyOn);
+
+  const offline = sel.filter(x => !x.online).map(x => x.name);
+  const what = !anyOn ? "" : l.mode === "scene" ? (SCENES[l.scene]?.[0] || l.scene) : l.mode === "hsv" ? "Цвет" : `${toneName(l.temp)} · ${l.temp} K`;
+  const head = target === "both" ? (sel.every(x => x.on) ? "Обе лампы горят" : anyOn ? `Горит ${sel.find(x => x.on).name}` : "Обе лампы выключены")
+    : `${l.name} ${l.on ? "горит" : "выключена"}`;
+  st.innerHTML = offline.length ? `<span class="err">Не в сети: ${esc(offline.join(", "))}</span>` : esc(head);
+
+  $("dcore").innerHTML = anyOn
+    ? `<span class="dmode">${esc(what)}</span><b><span id="dnum">${dialV}</span><i>%</i></b><span class="dlab">яркость</span>`
+    : `<span class="dmode">${target === "both" ? "Обе выключены" : "Выключена"}</span><b class="offt">Выкл</b><span class="dlab">нажмите, чтобы включить</span>`;
+  $("dcore").setAttribute("aria-label", anyOn ? "Выключить" : "Включить");
+  $("dpw").setAttribute("aria-label", anyOn ? "Выключить" : "Включить");
+  if (!dialDrag) setDial(l.bright || 100);
+
+  const hsv = anyOn && l.mode === "hsv";
+  $("tones").querySelectorAll(".tone").forEach(b => b.classList.toggle("on", anyOn && (b.dataset.k ? l.mode === "temp" && +b.dataset.k === l.temp : hsv)));
+  $("tone-color").style.setProperty("--c", hsv ? css(hsvRgb(l.hsv.h, l.hsv.s)) : "#fff");
+}
+
+const dial = $("dial");
+function dialAt(e, first) {
+  const b = dial.getBoundingClientRect(), k = b.width / 240;
+  let a = Math.atan2(e.clientY - b.top - DC * k, e.clientX - b.left - DC * k) * 180 / Math.PI;
+  a = (a - A0 + 720) % 360;
+  if (a > SWEEP) a = a - SWEEP < (360 - SWEEP) / 2 ? SWEEP : 0;   // палец в разрыве — к ближнему краю
+  let v = Math.round(1 + a / SWEEP * 99);
+  if (!first && Math.abs(v - dialV) > 50) v = dialV > 50 ? 100 : 1;   // через разрыв не перескакиваем
+  if (v === dialV) return;
+  if (Math.floor(v / 10) !== Math.floor(dialV / 10) || v === 1 || v === 100) { haptic.pick(); sound.tick(); }
+  setDial(v);
+  previewColor({bright: v});
+}
+dial.addEventListener("pointerdown", e => {
+  const b = dial.getBoundingClientRect(), k = b.width / 240;
+  const r = Math.hypot(e.clientX - b.left - DC * k, e.clientY - b.top - DC * k) / k;
+  if (!S?.lamps || r < 70 || e.target.closest(".dpw")) return;   // центр и кнопка в разрыве — это вкл/выкл, не дуга
+  dialDrag = dragging = true; dial.setPointerCapture(e.pointerId); dialAt(e, true);
+});
+dial.addEventListener("pointermove", e => { if (dialDrag) dialAt(e); });
+const dialUp = () => {
+  if (!dialDrag) return;
+  dialDrag = dragging = false;
+  cmd("bright", dialV, {bright: dialV});
+};
+dial.addEventListener("pointerup", dialUp);
+dial.addEventListener("pointercancel", dialUp);
+$("dcore").onclick = $("dpw").onclick = togglePower;
+$("dpw").innerHTML = svg(ICON.power, 18, 2.4);
+
+$("tones").innerHTML = WHITES.map(([k, n]) => `<button type="button" class="tone" data-k="${k}"><i style="--c:${css(kRgb(k))}"></i>${{Нейтральный: "Нейтр.", Дневной: "День", Холодный: "Холод"}[n] || n}</button>`).join("")
+  + `<button type="button" class="tone rainbow" id="tone-color"><i></i>Цвет</button>`;
+$("tones").querySelectorAll("[data-k]").forEach(b => b.onclick = () => { haptic.pick(); sendWhite(+b.dataset.k); });
+$("tone-color").onclick = () => { haptic.pick(); lightTab = shown()?.mode === "temp" ? "white" : "color"; openPane("p-light", "Свет"); };
+
+// ---------- лента сцен: все сцены и пресеты в одно касание ----------
+function drawStrip() {
+  const box = $("strip"), l = shown(), cur = l?.on && l.mode === "scene" ? l.scene : null;
+  const html = `<button type="button" class="pill more" data-more="1" aria-label="Все сцены и пресеты"><i>${svg(ICON.grid, 18, 1.8)}</i></button>`
+    + `<button type="button" class="pill candle${cur === "candle" ? " on" : ""}" data-s="candle"><i>${svg(ICON.moon, 15, 2)}</i>Ночник</button>`
+    + (S.scenes || []).filter(s => s !== "candle" && SCENES[s]).map(s =>
+      `<button type="button" class="pill${cur === s ? " on" : ""}" data-s="${s}"><i style="background:${SCENES[s][1]}"></i>${SCENES[s][0]}</button>`).join("")
+    + (S.presets || []).map(p => `<button type="button" class="pill" data-p="${p.id}"><i style="background:${presetColor(p)}"></i>${esc(p.name)}</button>`).join("");
+  if (box.dataset.html === html) return;   // не перерисовываем зря — лента не теряет прокрутку
+  box.dataset.html = html; box.innerHTML = html;
+  box.querySelectorAll(".pill").forEach(b => b.onclick = () => {
+    if (b.dataset.more) { haptic.pick(); return openPane("p-scenes", "Сцены и пресеты"); }
+    haptic.tap();
+    if (b.dataset.s === "candle") return cmd("night", null, {mode: "scene", scene: "candle"});
+    if (b.dataset.s) return cmd("scene", b.dataset.s, {mode: "scene", scene: b.dataset.s});
+    applyPreset((S.presets || []).find(p => p.id === b.dataset.p));
   });
 }
 
-function drawBulb() {
-  const st = $("status"), pb = $("pausebox");
-  if (S.lampsError) {
-    $("glass").setAttribute("fill", "#2a2a31"); $("hero").style.setProperty("--halo", 0);
-    st.innerHTML = `<span style="color:#ff8a8f">${esc(S.lampsError)}</span>`; pb.innerHTML = ""; return;
-  }
-  const l = shown(), sel = ids().map(i => S.lamps[i]);
-  const rgb = lampRgb(l);
-  const anyOn = sel.some(x => x.on);
-  if (rgb && anyOn) {
-    document.documentElement.style.setProperty("--glow", css(rgb));
-    $("glass").setAttribute("fill", css(rgb.map(x => Math.round(x * .9 + 22))));
-    $("filament").setAttribute("stroke", css(rgb.map(x => Math.round(x * .62))));
-    $("hero").style.setProperty("--halo", (0.35 + 0.65 * (l.mode === "scene" ? .5 : l.bright / 100)).toFixed(2));
-  } else {
-    $("glass").setAttribute("fill", "#2a2a31");
-    $("filament").setAttribute("stroke", "rgba(255,255,255,.28)");
-    $("hero").style.setProperty("--halo", 0);
-  }
-  const offline = sel.filter(x => !x.online).map(x => x.name);
-  const what = !l.on ? "" : l.mode === "scene" ? (SCENES[l.scene]?.[0] || l.scene) : l.mode === "hsv" ? `Цвет · ${l.bright}%` : `${l.temp} K · ${l.bright}%`;
-  const head = target === "both"
-    ? (sel.every(x => x.on) ? "Обе включены" : sel.some(x => x.on) ? `Включена ${esc(sel.find(x => x.on).name)}` : "Обе выключены")
-    : (l.on ? "Включена" : "Выключена");
-  st.innerHTML = `${head}<small>${offline.length ? `Не в сети: ${esc(offline.join(", "))}` : esc(what) || "Нажмите на лампочку, чтобы включить"}</small>`;
-  const paused = S.circ.enabled && sel.some(x => x.paused);
-  const until = Math.max(...sel.map(x => x.paused || 0));
-  pb.innerHTML = paused ? `<div class="paused">Циркадный на паузе${until > 1 ? ` до ${hm(until)}` : ""}<button type="button" id="resume">Вернуть</button></div>` : "";
-  if (paused) $("resume").onclick = resume;
+// ---------- карточки режимов ----------
+function drawMinis() {
+  const c = S.circ, L = S.lamps || [], paused = c.enabled && L.some(l => l.paused), until = Math.max(0, ...L.map(l => l.paused || 0));
+  $("m-circ").innerHTML = `<span class="ic">${svg(ICON.sun, 22, 1.8)}</span>
+    ${paused ? `<button type="button" class="ret" id="m-res">Вернуть</button>` : `<button type="button" class="sw${c.enabled ? " on" : ""}" id="m-sw" aria-label="Циркадный свет"></button>`}
+    <b>Циркадный</b><small>${!c.enabled ? "Выключен" : paused ? (until > 1 ? `Пауза до ${hm(until)}` : "На паузе") : `Сейчас ${c.k} K`}</small>`;
+  if (paused) $("m-res").onclick = e => { e.stopPropagation(); resume(); };
+  else $("m-sw").onclick = e => { e.stopPropagation(); saveCirc({enabled: !c.enabled}, true); };
+  const t = S.timer, next = (S.alarms || []).filter(a => a.enabled && a.next).sort((a, b) => a.next - b.next)[0];
+  $("m-modes").innerHTML = `<span class="ic">${svg(ICON.alarm, 22, 1.8)}</span>${t ? `<span class="badge">${Math.max(1, Math.ceil((t.end - Date.now()) / 6e4))} мин</span>` : ""}
+    <b>${t ? "Таймер сна" : "Сон и рассвет"}</b><small>${t ? `Погаснут в ${hm(t.end)}` : next ? `Рассвет ${next.time} ${dayOf(next.next)}` : "Будильник, таймер"}</small>`;
 }
+$("m-circ").onclick = $("m-modes").onclick = () => { haptic.pick(); openPane("p-modes", "Режимы"); };
 
-$("bulb").onclick = () => {
-  if (!S?.lamps) return;
-  haptic.tap();
-  const on = ids().some(i => S.lamps[i].on);
-  cmd(on ? "off" : "on");
-};
-
+// Пока палец ведёт — меняется только картинка; команда уходит, когда палец отпущен.
 async function resume() {
   haptic.tap();
   try { S = await api("/api/circadian", {}); draw(); toast("Циркадный снова ведёт свет"); }
   catch (e) { toast(e.message, true); }
 }
 
-const TABS = [["color", "Цвет"], ["white", "Белый"], ["scenes", "Сцены"], ["modes", "Режимы"]];
-function drawTabs() {
-  $("tabs").innerHTML = TABS.map(([k, n]) => `<button type="button" data-k="${k}" class="${tab === k ? "on" : ""}">${n}</button>`).join("");
-  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.k; haptic.pick(); store.set("tab", tab); draw(); });
-  for (const [k] of TABS) $("p-" + k).classList.toggle("on", tab === k);
+function previewColor(patch) {
+  for (const i of ids()) Object.assign(S.lamps[i], {on: true}, patch);
+  drawLive(); drawTarget();
+  if (theme === "lamp") applyLampTheme();
 }
 
-// ---------- вкладка «Цвет»: круг HSV + яркость ----------
+// ---------- шторка «Свет»: круг HSV и температура белого ----------
 const wheel = $("wheel"), wbox = $("wheelbox");
 let hue = 30, sat = 100;
 function paintWheel() {
@@ -518,51 +763,38 @@ wbox.addEventListener("pointermove", e => { if (dragging) wheelAt(e); });
 const wheelUp = () => { if (!dragging) return; dragging = false; haptic.pick(); sendColor(); };
 wbox.addEventListener("pointerup", wheelUp);
 wbox.addEventListener("pointercancel", wheelUp);
-const sendColor = () => cmd("hsv", {h: hue, s: sat, b: +$("cb").value}, {mode: "hsv", hsv: {h: hue, s: sat, v: 100}, bright: +$("cb").value});
-
-// Пока палец ведёт — меняется только картинка; команда уходит, когда палец отпущен.
-function previewColor(patch) {
-  for (const i of ids()) Object.assign(S.lamps[i], {on: true}, patch);
-  drawBulb();
-  if (theme === "lamp") applyLampTheme();
-}
+const sendColor = () => cmd("hsv", {h: hue, s: sat, b: curBright()}, {mode: "hsv", hsv: {h: hue, s: sat, v: 100}, bright: curBright()});
 
 $("swatches").innerHTML = SWATCHES.map(([h, s]) => `<button type="button" data-h="${h}" data-s="${s}" style="background:${css(hsvRgb(h, s))}" aria-label="Цвет"></button>`).join("");
 $("swatches").querySelectorAll("button").forEach(b => b.onclick = () => { hue = +b.dataset.h; sat = +b.dataset.s; placeKnob(); haptic.pick(); sendColor(); });
 
-function drawColor() {
-  if (tab !== "color") return;
-  paintWheel();
-  const l = shown();
-  if (!dragging && l?.mode === "hsv") { hue = l.hsv.h; sat = l.hsv.s; }
-  placeKnob();
-  if (!dragging && l) { $("cb").value = l.bright; $("cb-v").textContent = l.bright + "%"; }
-}
-$("cb").oninput = e => { $("cb-v").textContent = e.target.value + "%"; previewColor({bright: +e.target.value}); };
-$("cb").onchange = e => { haptic.pick(); cmd("bright", +e.target.value, {bright: +e.target.value}); };
-
-// ---------- вкладка «Белый» ----------
 $("whites").innerHTML = WHITES.map(([k, n]) => `<button type="button" class="chip" data-k="${k}"><span class="dot" style="background:${css(kRgb(k))}"></span>${n}</button>`).join("");
 $("whites").querySelectorAll("button").forEach(b => b.onclick = () => { haptic.pick(); sendWhite(+b.dataset.k); });
-const sendWhite = k => cmd("temp", {k, b: +$("wb").value}, {mode: "temp", temp: k, bright: +$("wb").value});
-function drawWhite() {
-  if (tab !== "white") return;
-  const l = shown();
-  if (!l) return;
-  const k = l.mode === "temp" ? l.temp : +$("tk").value;
-  $("tk").value = k; $("tk-v").textContent = k + " K";
-  $("wb").value = l.bright; $("wb-v").textContent = l.bright + "%";
-  $("whites").querySelectorAll("button").forEach(b => b.classList.toggle("on", l.on && l.mode === "temp" && +b.dataset.k === l.temp));
-}
+const sendWhite = k => cmd("temp", {k, b: curBright()}, {mode: "temp", temp: k, bright: curBright()});
 $("tk").oninput = e => { $("tk-v").textContent = e.target.value + " K"; previewColor({mode: "temp", temp: +e.target.value}); };
 $("tk").onchange = e => { haptic.pick(); sendWhite(+e.target.value); };
-$("wb").oninput = e => { $("wb-v").textContent = e.target.value + "%"; previewColor({bright: +e.target.value}); };
-$("wb").onchange = e => { haptic.pick(); cmd("bright", +e.target.value, {bright: +e.target.value}); };
+$("lseg").querySelectorAll("button").forEach(b => b.onclick = () => { lightTab = b.dataset.k; haptic.pick(); drawLight(); });
 
-// ---------- вкладка «Сцены» ----------
+function drawLight() {
+  $("lseg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === lightTab));
+  $("l-white").hidden = lightTab !== "white"; $("l-color").hidden = lightTab !== "color";
+  const l = shown();
+  if (!l) return;
+  if (lightTab === "color") {
+    paintWheel();
+    if (!dragging && l.mode === "hsv") { hue = l.hsv.h; sat = l.hsv.s; }
+    placeKnob();
+  } else if (!dragging) {
+    const k = l.mode === "temp" ? l.temp : +$("tk").value;
+    $("tk").value = k; $("tk-v").textContent = k + " K";
+    $("whites").querySelectorAll("button").forEach(b => b.classList.toggle("on", l.on && l.mode === "temp" && +b.dataset.k === l.temp));
+  }
+}
+
+// ---------- шторка «Сцены и пресеты» ----------
 $("nightbtn").onclick = () => { haptic.tap(); cmd("night", null, {mode: "scene", scene: "candle"}); };
 function drawScenes() {
-  if (tab !== "scenes" && !scenesOpen) return;
+  if (!scenesOpen) return;
   const l = shown(), cur = l?.on && l.mode === "scene" ? l.scene : null;
   $("nightbtn").classList.toggle("on", cur === "candle");
   $("scenes").innerHTML = (S.scenes || []).filter(s => s !== "candle" && SCENES[s]).map(s =>
@@ -574,12 +806,15 @@ function drawScenes() {
   $("presets").querySelectorAll(".preset").forEach(b => b.onclick = e => {
     const id = e.target.dataset.del;
     if (id) return delPreset(id);
-    const p = pr.find(x => x.id === b.dataset.id);
     haptic.tap();
-    const v = p.cmd.value, patch = p.cmd.kind === "hsv" ? {mode: "hsv", hsv: {h: v.h, s: v.s, v: 100}, bright: v.b || 100}
-      : p.cmd.kind === "temp" ? {mode: "temp", temp: v.k, bright: v.b || 100} : {mode: "scene", scene: v};
-    cmd(p.cmd.kind, v, patch);
+    applyPreset(pr.find(x => x.id === b.dataset.id));
   });
+}
+function applyPreset(p) {
+  if (!p) return;
+  const v = p.cmd.value, patch = p.cmd.kind === "hsv" ? {mode: "hsv", hsv: {h: v.h, s: v.s, v: 100}, bright: v.b || 100}
+    : p.cmd.kind === "temp" ? {mode: "temp", temp: v.k, bright: v.b || 100} : {mode: "scene", scene: v};
+  cmd(p.cmd.kind, v, patch);
 }
 function presetColor(p) {
   const v = p.cmd.value;
@@ -596,10 +831,10 @@ async function delPreset(id) {
   try { S = await api("/api/presets", {op: "delete", id}); haptic.pick(); draw(); } catch (e) { toast(e.message, true); }
 }
 
-// ---------- вкладка «Режимы» ----------
+// ---------- шторка «Режимы» ----------
 let editing = null;   // будильник в редакторе: {id?, time, days, minutes, lamps}
 function drawModes() {
-  if (tab !== "modes" && !modesOpen) return;
+  if (!modesOpen) return;
   drawCirc(); drawDawn(); drawTimer();
 }
 
@@ -747,6 +982,7 @@ function applyTheme(t) {
       tg.setBackgroundColor(COLORS[t] || "bg_color");
     }
   } catch {}
+  applyScheme();
   if (t === "lamp") applyLampTheme();
   drawThemes();
   setSpecial(t);
@@ -771,12 +1007,26 @@ async function setSpecial(t) {
     applyTheme("dark");
   }
 }
+// Палитра обычных тем: светлая или тёмная, «Авто» следует за Telegram. У особых тем схемы нет — у них свой скин.
+function applyScheme() {
+  const h = document.documentElement;
+  if (theme !== "lamp") h.style.removeProperty("--accent-text");   // её ставит applyLampTheme под цвет ламп
+  if (SPECIAL[theme]) return h.removeAttribute("data-scheme");
+  const dark = theme === "dark" || theme === "lamp"
+    || theme === "auto" && (tg?.colorScheme ? tg.colorScheme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches);
+  h.dataset.scheme = dark ? "dark" : "light";
+  const bg = getComputedStyle(h).getPropertyValue("--bg").trim();
+  try { if (bg && tg?.isVersionAtLeast?.("6.1")) { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } } catch {}
+}
+tg?.onEvent?.("themeChanged", () => { if (theme === "auto") applyScheme(); });
 // Акцент — цвет ламп, но не темнее, чем нужно для читаемости на тёмном фоне.
 function applyLampTheme() {
   const rgb = lampRgb(shown()) || [255, 196, 120];
   const lum = (.299 * rgb[0] + .587 * rgb[1] + .114 * rgb[2]) / 255;
   const lift = lum < .45 ? rgb.map(x => Math.round(x + (255 - x) * (.45 - lum))) : rgb;
   document.documentElement.style.setProperty("--glow", css(lift));
+  const l2 = (.299 * lift[0] + .587 * lift[1] + .114 * lift[2]) / 255;
+  document.documentElement.style.setProperty("--accent-text", l2 < .55 ? "#fff" : "#15120c");
 }
 function drawThemes() {
   const box = $("themes");
@@ -814,8 +1064,8 @@ $("sheet").onclick = e => { if (e.target === $("sheet")) closeSheet(); };
 // панели «Режимы» и «Сцены» переезжают в шторку и возвращаются на место после закрытия
 function openPane(id, title) {
   const pane = $(id), home = pane.parentNode, next = pane.nextSibling;
-  if (id === "p-modes") modesOpen = true; else scenesOpen = true;
-  openSheet(title, pane, () => { home.insertBefore(pane, next); modesOpen = scenesOpen = false; draw(); });
+  if (id === "p-modes") modesOpen = true; else if (id === "p-scenes") scenesOpen = true; else lightOpen = true;
+  openSheet(title, pane, () => { home.insertBefore(pane, next); modesOpen = scenesOpen = lightOpen = false; draw(); });
   draw();
 }
 function openThemes() {
@@ -924,17 +1174,15 @@ function drawSettings(users, uerr) {
 
 // ---------- запуск ----------
 (async () => {
-  const [t, tb, snd] = await Promise.all([store.get("theme"), store.get("tab"), store.get("sound")]);
+  const [t, snd] = await Promise.all([store.get("theme"), store.get("sound")]);
   sound.enabled = snd !== "0";
   applyTheme(THEMES.some(x => x[0] === t) ? t : "auto");
-  if (TABS.some(x => x[0] === tb)) tab = tb;
-  drawTabs();
   await load();
 })();
 // пока пульт открыт, подтягиваем состояние: лампы могли переключить Алисой
 setInterval(() => { if (!document.hidden && !busy && !dragging && $("settings").hidden && S?.lamps) load(); }, 12000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S) load(true); });
-window.addEventListener("resize", () => { if (tab === "color") { paintWheel(); placeKnob(); } });
+window.addEventListener("resize", () => { if (lightOpen && lightTab === "color") { paintWheel(); placeKnob(); } });
 </script>
 </body>
 </html>
