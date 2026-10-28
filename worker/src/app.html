@@ -734,7 +734,7 @@ async function setTimer(body) {
 // ---------- темы: обычные меняют цвета, особые (Y2K) подменяют раскладку целиком своим модулем ----------
 const THEMES = [["auto", "Авто"], ["light", "Светлая"], ["dark", "Тёмная"], ["pink", "Котики"], ["y2k", "Y2K"], ["lamp", "Под цвет ламп"]];
 const COLORS = {light: "#ffffff", dark: "#0e0e10", pink: "#fff1f7", lamp: "#0d0d10", y2k: "#030308"};
-const SPECIAL = {y2k: "/themes/y2k.js"};   // модуль экспортирует mount(App, root) → {update(), unmount()}
+const SPECIAL = {y2k: "/themes/y2k.js", pink: "/themes/cats.js"};   // модуль экспортирует mount(App, root) → {update(), unmount()}
 let theme = "auto", special = null, specialName = null;
 function applyTheme(t) {
   theme = t;
