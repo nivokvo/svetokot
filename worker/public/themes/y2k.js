@@ -1,5 +1,5 @@
 // Y2K-тема Светокота: своя раскладка поверх общего ядра Mini App (window.App в app.html).
-// Экран в рамке из жидкого хрома, внутри — настоящая 3D-лампочка: рендер лучами (raymarching) в одном шейдере, без библиотек.
+// Экран в рамке из жидкого хрома, внутри — 3D-модель лампы из Blender (assets/lamp.blend), свой лёгкий WebGL-рендер без библиотек.
 // Верх колбы — зеркальный хром, который медленно стекает каплями; низ светится цветом ламп (в режиме «Обе» — двумя цветами).
 // Управление простое: свайп по лампе вверх-вниз — яркость, тап — вкл/выкл, вбок — покрутить; ниже хромовые ползунки.
 
@@ -63,7 +63,7 @@ html[data-theme="y2k"] body { padding: 0; background: #000; overflow: hidden; }
 .y2k-sl { flex: 1; min-width: 0; }
 .y2k-sl .lb { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.5px; color: #8f99c9; margin-bottom: 6px; }
 .y2k-sl .lb b { color: #fff; font-weight: 800; }
-.y2k input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; margin: 0; background: none; cursor: pointer; --p: 50%; --g: linear-gradient(90deg, #3d4566, rgb(var(--lamp))); }
+.y2k input[type=range] { touch-action: none; -webkit-appearance: none; appearance: none; width: 100%; height: 26px; margin: 0; background: none; cursor: pointer; --p: 50%; --g: linear-gradient(90deg, #3d4566, rgb(var(--lamp))); }
 .y2k input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px;
   background: var(--g) 0 0 / var(--p) 100% no-repeat, #0b0c12; box-shadow: inset 0 1px 3px rgba(0,0,0,.9), 0 0 0 1px rgba(190,200,255,.18); }
 .y2k input[type=range].full::-webkit-slider-runnable-track { background: var(--g); }
@@ -79,7 +79,7 @@ html[data-theme="y2k"] body { padding: 0; background: #000; overflow: hidden; }
   background: linear-gradient(90deg, #8c92a1, #fff, #8c92a1); box-shadow: 0 0 8px rgba(var(--lamp), .9); }
 .y2k-pane { display: none; min-height: 64px; }
 .y2k-pane.on { display: grid; gap: 8px; align-content: start; }
-.y2k-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; }
+.y2k-chips { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; }
 .y2k-chips::-webkit-scrollbar { display: none; }
 .y2k-chip { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 8px 12px; font-size: 10px; font-weight: 600; letter-spacing: 1px; cursor: pointer;
   color: #dfe4f5; background: #0d0f17; box-shadow: inset 0 0 0 1px rgba(190,200,255,.2); display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
@@ -87,23 +87,63 @@ html[data-theme="y2k"] body { padding: 0; background: #000; overflow: hidden; }
 .y2k-chip.sig { background: linear-gradient(180deg, #1a1d2c, #0d0f17); box-shadow: inset 0 0 0 1px rgba(200,210,255,.35); }
 .y2k-chip.on { color: #11131a; background: linear-gradient(180deg, #fff 0%, #d5d9e4 45%, #8c92a1 52%, #e3e6ee 100%); }
 .y2k-chip:active { transform: scale(.95); }
-.y2k-nav { display: flex; justify-content: space-between; border-top: 1px solid rgba(190,200,255,.12); padding-top: 8px; }
-.y2k-nav button { border: 0; background: none; font-size: 10px; letter-spacing: 2px; color: #8f99c9; cursor: pointer; padding: 4px 2px; }
-.y2k-nav button:active { color: #fff; }
+.y2k-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.y2k-nav button { border: 0; background: none; padding: 0; cursor: pointer; display: grid; justify-items: center; gap: 4px; font-size: 9px; font-weight: 600; letter-spacing: 1.5px; color: #8f99c9; }
+.y2k-nav .key { width: 100%; height: 34px; border-radius: 999px; display: grid; place-items: center;
+  background: linear-gradient(180deg, #fff 0%, #d5d9e4 45%, #8c92a1 52%, #e3e6ee 100%); box-shadow: inset 0 1px 0 #fff, inset 0 -2px 3px rgba(0,0,0,.25), 0 3px 10px rgba(0,0,0,.7); transition: transform .12s; }
+.y2k-nav .key svg { width: 18px; height: 18px; }
+.y2k-nav button:active .key { transform: scale(.93); }
 .y2k-nogl { position: absolute; inset: 0; display: grid; place-items: center; color: #8f99c9; font-size: 11px; text-align: center; }
 
-/* окна 2000-х: шторка ядра получает хромовую шапку */
-html[data-theme="y2k"] .sheet { background: rgba(0,0,0,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-html[data-theme="y2k"] .sheet-card { background: rgba(8,9,16,.96); border-radius: 18px 18px 0 0; padding-top: 0;
-  box-shadow: 0 0 0 1px rgba(200,210,255,.25), 0 -10px 40px rgba(110,130,255,.2); animation: winopen .35s cubic-bezier(.2,.9,.3,1.15); }
-html[data-theme="y2k"] .sheet-head { margin: 0 -16px 10px; padding: 10px 16px; border-radius: 18px 18px 0 0;
-  background: linear-gradient(180deg, #f4f6fb 0%, #c7ccd8 48%, #8c92a0 52%, #d9dde6 100%); color: #1c1f28; }
-html[data-theme="y2k"] .sheet-head b { font: 800 13px "JetBrains Mono", monospace; text-transform: lowercase; letter-spacing: 1px; }
-html[data-theme="y2k"] .sheet-head b::after { content: ".exe"; opacity: .55; }
-html[data-theme="y2k"] .sheet-x { background: linear-gradient(180deg, #ff9a7a, #e8432a); color: #fff; width: 24px; height: 24px; font-size: 15px; line-height: 1; }
-html[data-theme="y2k"] .sheet .card { border: 1px solid rgba(160,180,255,.14); }
+/* ---------- окна «Режимы», «Пресеты», «Тема», «Ещё» — тот же хром и моноширинный шрифт, что и пульт ---------- */
+html[data-theme="y2k"] .sheet { background: rgba(0,0,0,.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+html[data-theme="y2k"] .sheet-card, html[data-theme="y2k"] #settings { font-family: "JetBrains Mono", ui-monospace, monospace; color: #e9ecf6; }
+html[data-theme="y2k"] .sheet-card { background: #040406; border-radius: 26px 26px 0 0; padding: 0 14px 26px;
+  box-shadow: 0 0 0 1px rgba(205,212,235,.35), inset 0 1px 0 rgba(255,255,255,.25), 0 -12px 40px rgba(110,130,255,.22); animation: rise .35s cubic-bezier(.2,.9,.3,1.12); }
+html[data-theme="y2k"] .sheet-head { background: #040406; margin: 0 -14px 8px; padding: 14px 18px 10px; }
+html[data-theme="y2k"] .sheet-head::before { content: ""; position: absolute; left: 50%; top: 6px; width: 38px; height: 4px; border-radius: 2px; transform: translateX(-50%);
+  background: linear-gradient(90deg, #8c92a1, #fff, #8c92a1); }
+html[data-theme="y2k"] .sheet-head b { font: 800 13px "JetBrains Mono", monospace; letter-spacing: 3px; text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 0%, #dfe4f2 40%, #6c7386 52%, #f4f6fb 64%, #a7aebe 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme="y2k"] .sheet-x, html[data-theme="y2k"] #settings .back { border: 0; width: 30px; height: 30px; border-radius: 50%; color: #1a1c24; font-size: 16px; font-weight: 800;
+  background: radial-gradient(circle at 50% 30%, #fff 0%, #dde1ea 32%, #868c9b 68%, #cfd3dd 100%); box-shadow: 0 2px 6px rgba(0,0,0,.6); }
+html[data-theme="y2k"] :is(.sheet, #settings) .card { background: #0a0b11; border-radius: 18px; box-shadow: inset 0 0 0 1px rgba(205,212,235,.16), inset 0 1px 0 rgba(255,255,255,.06); }
+html[data-theme="y2k"] :is(.sheet, #settings) .ttl { font-size: 12px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+html[data-theme="y2k"] :is(.sheet, #settings) .hint, html[data-theme="y2k"] :is(.sheet, #settings) h2 { font-size: 11px; color: #8f99c9; letter-spacing: .3px; }
+html[data-theme="y2k"] :is(.sheet, #settings) h2 { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; }
+html[data-theme="y2k"] :is(.sheet, #settings) .sw { background: #0b0c12; box-shadow: inset 0 1px 3px rgba(0,0,0,.9), 0 0 0 1px rgba(205,212,235,.25); }
+html[data-theme="y2k"] :is(.sheet, #settings) .sw::after { background: radial-gradient(circle at 40% 30%, #fff 0%, #e4e7ef 30%, #7d8392 70%, #c6cad4 100%); }
+html[data-theme="y2k"] :is(.sheet, #settings) .sw.on { background: linear-gradient(90deg, #2a3570, #6f86ff); box-shadow: inset 0 1px 3px rgba(0,0,0,.6), 0 0 12px rgba(111,134,255,.6); }
+html[data-theme="y2k"] .sheet .stepper { background: #050508; box-shadow: inset 0 0 0 1px rgba(205,212,235,.18); }
+html[data-theme="y2k"] .sheet .stepper small { text-transform: uppercase; letter-spacing: 1.5px; font-size: 9px; color: #8f99c9; }
+html[data-theme="y2k"] .sheet .stepper button { color: #fff; font-weight: 800; }
+html[data-theme="y2k"] .sheet .chart text { fill: #8f99c9; font-family: "JetBrains Mono", monospace; font-size: 9px; }
+html[data-theme="y2k"] :is(.sheet, #settings) .btn { border-radius: 999px; font: 800 11px "JetBrains Mono", monospace; letter-spacing: 1.5px; text-transform: uppercase; color: #11131a;
+  background: linear-gradient(180deg, #fff 0%, #d5d9e4 45%, #8c92a1 52%, #e3e6ee 100%); box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+html[data-theme="y2k"] :is(.sheet, #settings) .btn.ghost { color: #e9ecf6; background: #0d0f17; box-shadow: inset 0 0 0 1px rgba(205,212,235,.3); }
+html[data-theme="y2k"] :is(.sheet, #settings) .btn.danger { color: #ff6f98; background: none; box-shadow: none; }
+html[data-theme="y2k"] .sheet :is(.timers button, .days button, .chip, .preset) { font-family: "JetBrains Mono", monospace; text-transform: uppercase; letter-spacing: 1px; color: #dfe4f5;
+  background: #0d0f17; box-shadow: inset 0 0 0 1px rgba(205,212,235,.22); }
+html[data-theme="y2k"] .sheet :is(.days button.on, .chip.on) { color: #11131a; background: linear-gradient(180deg, #fff 0%, #d5d9e4 45%, #8c92a1 52%, #e3e6ee 100%); }
+html[data-theme="y2k"] .sheet .alarm .tm { font-family: "JetBrains Mono", monospace; font-weight: 800;
+  background: linear-gradient(180deg, #fff 0%, #dfe4f2 40%, #6c7386 52%, #f4f6fb 64%, #a7aebe 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme="y2k"] .sheet .bar { background: #0b0c12; } html[data-theme="y2k"] .sheet .bar i { background: linear-gradient(90deg, #6f86ff, #fff); }
+html[data-theme="y2k"] .sheet .editor input[type=time] { background: #050508; color: #fff; font-family: "JetBrains Mono", monospace; box-shadow: inset 0 0 0 1px rgba(205,212,235,.25); color-scheme: dark; }
+html[data-theme="y2k"] .sheet .night { background: #0a0b11; box-shadow: inset 0 0 0 1px rgba(205,212,235,.25); font-family: "JetBrains Mono", monospace; }
+html[data-theme="y2k"] .sheet .night b { text-transform: uppercase; letter-spacing: 2px; font-size: 14px; }
+html[data-theme="y2k"] .sheet .scene { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; text-shadow: none;
+  box-shadow: inset 0 0 0 200px rgba(5,5,9,.74), inset 0 0 0 1px rgba(205,212,235,.25); }
+html[data-theme="y2k"] .sheet .scene.on, html[data-theme="y2k"] .sheet .night.on { box-shadow: inset 0 0 0 200px rgba(5,5,9,.45), inset 0 0 0 2px #fff, 0 0 16px rgba(111,134,255,.6); }
+html[data-theme="y2k"] :is(.sheet, #settings) :is(.save input, .field input) { background: #050508; color: #fff; font-family: "JetBrains Mono", monospace; box-shadow: inset 0 0 0 1px rgba(205,212,235,.22); }
+html[data-theme="y2k"] .sheet .opts button { background: #0a0b11; font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(205,212,235,.16); color: #e9ecf6; }
+html[data-theme="y2k"] .sheet .opts button.on { box-shadow: inset 0 0 0 2px #fff, 0 0 14px rgba(111,134,255,.55); }
+html[data-theme="y2k"] #settings { padding: 14px 16px 30px; background: #000; min-height: 100vh; }
+html[data-theme="y2k"] #settings h1 { font: 800 18px "JetBrains Mono", monospace; letter-spacing: 3px; text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 0%, #dfe4f2 40%, #6c7386 52%, #f4f6fb 64%, #a7aebe 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme="y2k"] #settings .back { font-size: 0; display: grid; place-items: center; }
+html[data-theme="y2k"] #settings .back::before { content: "‹"; font-size: 22px; line-height: 1; margin-top: -3px; }
 html[data-theme="y2k"] .toast { background: linear-gradient(180deg, #fff, #c9cdd8); color: #11131a; font: 600 12px "JetBrains Mono", monospace; }
-@keyframes winopen { from { transform: translateY(30px) scale(.94); opacity: 0; } }
 `;
 
 const POWER = `<svg viewBox="0 0 24 24" fill="none" stroke="#1a1c24" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>`;
@@ -139,7 +179,7 @@ export function mount(App, root) {
         <div class="y2k-sl"><div class="lb"><span>НАСЫЩЕННОСТЬ</span><b id="y2k-sv">—</b></div><input type="range" class="full" id="y2k-s" min="0" max="100"></div>
       </div>
       <div class="y2k-pane" data-p="scenes"><div class="y2k-chips" id="y2k-scenes"></div></div>
-      <nav class="y2k-nav"><button type="button" data-a="modes">[ РЕЖИМЫ ]</button><button type="button" data-a="scenes">[ ПРЕСЕТЫ ]</button><button type="button" data-a="theme">[ ТЕМА ]</button><button type="button" data-a="settings">[ ЕЩЁ ]</button></nav>
+      <nav class="y2k-nav"><button type="button" data-a="modes"><span class="key"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1c24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d='M4 17h16M7 17a5 5 0 0 1 10 0M12 7V4M5.6 10.6 3.5 8.5M18.4 10.6l2.1-2.1'/></svg></span>РЕЖИМЫ</button><button type="button" data-a="scenes"><span class="key"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1c24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d='M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z'/></svg></span>ПРЕСЕТЫ</button><button type="button" data-a="theme"><span class="key"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1c24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx='12' cy='12' r='8.5'/><path d='M12 3.5a8.5 8.5 0 0 0 0 17z' fill='#1a1c24'/></svg></span>ТЕМА</button><button type="button" data-a="settings"><span class="key"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1c24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx='6' cy='12' r='1.4' fill='#1a1c24'/><circle cx='12' cy='12' r='1.4' fill='#1a1c24'/><circle cx='18' cy='12' r='1.4' fill='#1a1c24'/></svg></span>ЕЩЁ</button></nav>
     </section>
   </div>`;
   const $ = id => root.querySelector("#" + id);
@@ -235,7 +275,7 @@ export function mount(App, root) {
   root.querySelectorAll(".y2k-tabs button").forEach(b => b.onclick = () => { tab = b.dataset.t; App.haptic.pick(); App.sound.pick(); App.store.set("y2kTab", tab); update(); });
   root.querySelectorAll(".y2k-nav button").forEach(b => b.onclick = () => {
     App.haptic.pick();
-    ({modes: App.openModes, scenes: App.openScenes, theme: App.openThemes, settings: App.openSettings})[b.dataset.a]();
+    ({modes: App.openModes, scenes: () => App.openScenes("Пресеты"), theme: App.openThemes, settings: App.openSettings})[b.dataset.a]();
   });
   App.store.get("y2kTab").then(t => { if (["white", "color", "scenes"].includes(t)) { tab = t; update(); } });
 
@@ -305,211 +345,265 @@ export function mount(App, root) {
   return {update, unmount() { gl?.dispose(); style.remove(); root.innerHTML = ""; }};
 }
 
-// ---------- WebGL: лампа лучами + рамка из жидкого хрома, один полноэкранный шейдер ----------
-const VERT = "attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }";
-const FRAG = `
-precision highp float;
-uniform vec2 uRes; uniform float uTime, uYaw, uLit, uBright, uRipple, uScale;
-uniform vec3 uC1, uC2;
-#define PI 3.14159265
-
-mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
-float smin(float a, float b, float k){ float h = clamp(.5 + .5 * (b - a) / k, 0., 1.); return mix(b, a, h) - k * h * (1. - h); }
-float sdCone(vec3 p, float h, float r1, float r2){
-  vec2 q = vec2(length(p.xz), p.y), k1 = vec2(r2, h), k2 = vec2(r2 - r1, 2. * h);
-  vec2 ca = vec2(q.x - min(q.x, (q.y < 0.) ? r1 : r2), abs(q.y) - h);
-  vec2 cb = q - k1 + k2 * clamp(dot(k1 - q, k2) / dot(k2, k2), 0., 1.);
-  float s = (cb.x < 0. && ca.y < 0.) ? -1. : 1.;
-  return s * sqrt(min(dot(ca, ca), dot(cb, cb)));
-}
-// радиус колбы на высоте y — чтобы капли бежали по поверхности стекла
-float glassR(float y){ return y > .12 ? sqrt(max(0., 1. - (y - .55) * (y - .55))) : mix(.44, .78, clamp((y + .45) / .57, 0., 1.)); }
-// жидкий хром сверху колбы: граница опускается потёками, они медленно тянутся и подтягиваются обратно
-float crown(vec3 p){
-  float a = atan(p.x, p.z), line = .66 + .025 * sin(a * 6. + uTime * .5), d = 0.;
-  for (int i = 0; i < 6; i++) {
-    float fi = float(i), ang = fi * 1.0472 + .35 * sin(fi * 2.3);
-    float da = abs(mod(a - ang + PI, 2. * PI) - PI), w = .13 + .05 * sin(fi * 1.7);
-    float len = (.18 + .5 * (.5 + .5 * sin(uTime * (.22 + fi * .03) + fi * 1.9))) * (1. - fi * .07);
-    d = max(d, len * sqrt(max(0., 1. - (da / w) * (da / w))));
-  }
-  return smoothstep(line - d - .012, line - d + .012, p.y);
-}
-vec3 dropPos(float fi){
-  float ang = fi * 2.0944 + .6, ph = fract(uTime * .07 + fi * .37), y = .35 - ph * .85;
-  float r = glassR(y) + .045;
-  return vec3(sin(ang) * r, y, cos(ang) * r);
-}
-// x — расстояние, y — материал: 0 стекло, 1 хром
-vec2 map(vec3 p){
-  p.xz *= rot(uYaw);
-  p.y += .12;
-  float wob = uRipple * .03 * sin(p.y * 9. - uTime * 9.);
-  float g = smin(length(p - vec3(0., .55, 0.)) - 1., sdCone(p - vec3(0., -.17, 0.), .29, .44, .79), .32) + wob;
-  float m = 0.;
-  if (g < .12) { m = crown(p); g -= .022 * m; }
-  vec2 r = vec2(g, step(.5, m));
-  float base = max(length(p.xz) - (.45 + .016 * sin(p.y * 30.)), abs(p.y + .82) - .4);
-  base = smin(base, length(p - vec3(0., -1.28, 0.)) - .17, .1);
-  if (base < r.x) r = vec2(base, 1.);
-  if (abs(length(p.xz) - .7) < .5) for (int i = 0; i < 3; i++) {
-    float fi = float(i), ph = fract(uTime * .07 + fi * .37);
-    float d = length(p - dropPos(fi)) - .055 * (1. - ph * .6);
-    if (d < r.x) r = vec2(d, 1.);
-  }
-  return r;
-}
-vec3 normal(vec3 p){
-  vec2 e = vec2(.0015, -.0015);
-  return normalize(e.xyy * map(p + e.xyy).x + e.yyx * map(p + e.yyx).x + e.yxy * map(p + e.yxy).x + e.xxx * map(p + e.xxx).x);
-}
-// окружение для хрома: «хромовый горизонт» (светлое небо, тёмная полоса, сиреневый низ) + студийные полосы света
+// ---------- WebGL: рамка из жидкого хрома (полноэкранный проход) + модель лампы из Blender (assets/lamp.blend) ----------
+// Модель: тела вращения (колба, цоколь, изолятор, контакт) приходят профилями и собираются здесь,
+// хромовые потёки, капли и нить — сеткой (int16 координаты, int8 нормали) из public/themes/y2k/lamp.bin.
+const ENV = `
 vec3 env(vec3 d){
   float y = d.y, a = atan(d.x, d.z);
   vec3 sky = mix(vec3(.5, .56, .95), vec3(1.7, 1.75, 1.9), smoothstep(.15, .85, y));
   vec3 low = mix(vec3(.03, .03, .07), vec3(.42, .36, .7), smoothstep(-.05, -.7, y));
   vec3 c = y > .03 ? mix(vec3(.05, .05, .1), sky, smoothstep(.03, .2, y)) : low;
-  c += 1.8 * exp(-pow((a - .3) * 10., 2.)) + 1.1 * exp(-pow((a + .55) * 12., 2.));   // вертикальные софтбоксы — блики на цоколе
+  c += 1.8 * exp(-pow((a - .3) * 10., 2.)) + 1.1 * exp(-pow((a + .55) * 12., 2.));
   c += 2.2 * exp(-pow((a - 1.1) * 7., 2.)) * smoothstep(-.3, .5, y);
   c += 1.6 * exp(-pow((a + 1.9) * 9., 2.)) * smoothstep(-.1, .7, y);
   c += mix(uC2, uC1, .5) * uLit * .9 * smoothstep(.2, -.6, y);
   return c;
-}
-// хром рамки: тёмная полоса горизонта и яркий блик, зависят только от наклона канта
+}`;
+const BG_VERT = "attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }";
+const BG_FRAG = `
+precision highp float;
+uniform vec2 uRes; uniform vec3 uGlow; uniform float uTime, uLit, uBright, uScale; uniform vec3 uC1, uC2;
+#define PI 3.14159265
+${ENV}
 vec3 bezel(vec3 n){
   float y = n.y * .85 + n.x * .25;
   vec3 c = mix(vec3(.03, .03, .06), vec3(1.5, 1.55, 1.7), smoothstep(-.05, .55, y));
   c = mix(c, vec3(.45, .42, .75), smoothstep(-.05, -.6, y) * .7);
   return c + 1.4 * exp(-pow((n.x - .4) * 7., 2.)) + .6 * exp(-pow((n.y + .5) * 6., 2.));
 }
-// рамка экрана: хромовый кант с «оплывшим» внутренним краем и подтёками сверху
 float rbox(vec2 p, vec2 b, float r){ vec2 q = abs(p) - b + r; return length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r; }
+// хромовый кант с «оплывшим» внутренним краем и подтёками сверху
 float frameH(vec2 px){
-  vec2 c = uRes * .5, q = px - c;
-  float o = rbox(q, c - 3. * uScale, 30. * uScale);
+  vec2 c = uRes * .5;
+  float o = rbox(px - c, c - 3. * uScale, 30. * uScale);
   float melt = 3. * uScale * sin(px.x * .045 / uScale + 1.4 * sin(px.y * .03 / uScale + uTime * .35))
     + 16. * uScale * exp(-pow((px.x - c.x * .55) / (10. * uScale), 2.)) * smoothstep(c.y * 1.6, uRes.y, px.y)
     + 24. * uScale * exp(-pow((px.x - c.x * 1.38) / (8. * uScale), 2.)) * smoothstep(c.y * 1.5, uRes.y, px.y);
-  float w = 13. * uScale + melt;
-  float t = clamp(-o / w, 0., 1.);
+  float t = clamp(-o / (13. * uScale + melt), 0., 1.);
   return o > 0. ? -1. : (t >= 1. ? -2. : sin(t * PI));
 }
-
 void main(){
   vec2 px = gl_FragCoord.xy;
   float h = frameH(px);
   if (h == -1.) { gl_FragColor = vec4(0.); return; }
   if (h >= 0.) {
-    float hx = frameH(px + vec2(1., 0.)), hy = frameH(px + vec2(0., 1.));
-    hx = hx < 0. ? 0. : hx; hy = hy < 0. ? 0. : hy;
+    float hx = max(0., frameH(px + vec2(1., 0.))), hy = max(0., frameH(px + vec2(0., 1.)));
     vec3 n = normalize(vec3((h - hx) * 9. / uScale, (h - hy) * 9. / uScale, 1.));
     vec3 col = bezel(n) * vec3(.9, .92, 1.03);
-    gl_FragColor = vec4(col * smoothstep(0., .08, h) + .02, 1.);
+    col = col / (1. + col * .35);
+    gl_FragColor = vec4(pow(col * smoothstep(0., .08, h), vec3(.4545)) + .02, 1.);
     return;
   }
   vec2 uv = (px - uRes * .5) / uRes.y;
-  vec3 ro = vec3(0., .1, 9.4), rd = normalize(vec3(uv.x, uv.y - .02, -1.8));
-  float t = 0., mind = 1e3; vec2 hit = vec2(-1.);
-  for (int i = 0; i < 90; i++) {
-    vec2 d = map(ro + rd * t);
-    mind = min(mind, d.x);
-    if (d.x < .0012) { hit = d; break; }
-    t += d.x * .8;
-    if (t > 14.) break;
-  }
-  vec3 c1 = uC1, c2 = uC2;
   float glow = .25 + .75 * uBright;
-  // фон экрана: почти чёрный, с отсветом ламп и сеткой-полом
-  vec3 bg = vec3(.006, .007, .016) + mix(c2, c1, .5) * uLit * glow * .09 * exp(-dot(uv, uv) * 5.);
+  vec3 lc = mix(uC2, uC1, .5);
+  vec3 col = vec3(.006, .007, .016) + lc * uLit * glow * .5 * exp(-dot(px - uGlow.xy, px - uGlow.xy) / (uGlow.z * uGlow.z));
   vec2 g = vec2(uv.x / max(.08, -uv.y + .02), 1. / max(.08, -uv.y + .02));
   float grid = uv.y < -.18 ? (smoothstep(.03, 0., abs(fract(g.x * .9) - .5) - .47) + smoothstep(.03, 0., abs(fract(g.y * .9 + uTime * .25) - .5) - .47)) * smoothstep(-.18, -.5, uv.y) : 0.;
-  bg += vec3(.25, .3, .75) * grid * .22 + mix(c2, c1, .5) * grid * uLit * .2;
-  vec3 col = bg;
-  if (hit.y >= 0.) {
-    vec3 p = ro + rd * t, n = normal(p), r = reflect(rd, n);
-    float fres = pow(1. - max(0., dot(n, -rd)), 3.);
-    vec3 pl = p; pl.xz *= rot(uYaw); pl.y += .12;
-    if (hit.y > .5) {
-      col = env(r) * mix(vec3(.82, .85, 1.), vec3(1.05), fres) * .9 + vec3(.06, .065, .1) + vec3(.35, .4, .65) * fres;
-      col += mix(c2, c1, .5) * uLit * glow * .35 * max(0., -n.y);
-    } else {
-      vec3 lc = mix(c2, c1, smoothstep(-.5, 1.1, pl.y));
-      float core = pow(max(0., dot(n, -rd)), 2.);
-      vec3 on = lc * (.18 + 1.35 * core) * (.45 + .9 * glow) + vec3(1.) * pow(core, 8.) * .6 * glow;
-      vec3 off = env(r) * (.06 + .7 * fres) + vec3(.015, .016, .03);
-      col = mix(off, on + env(r) * (.06 + .45 * fres), uLit);
-    }
-  }
-  col += mix(c2, c1, .5) * uLit * glow * .45 * exp(-mind * 7.) * (hit.y < 0. ? 1. : .2);
+  col += vec3(.25, .3, .75) * grid * .22 + lc * grid * uLit * .2;
   col = col / (1. + col * .35);
   gl_FragColor = vec4(pow(col, vec3(.4545)), 1.);
 }`;
+const MESH_VERT = `
+attribute vec3 aPos; attribute vec3 aNrm;
+uniform mat4 uProj, uView, uModel; uniform vec3 uMin, uSize, uOff; uniform float uQuant, uTime, uWob;
+varying vec3 vW, vN; varying float vY;
+void main(){
+  vec3 p = uQuant > .5 ? uMin + (aPos * .5 + .5) * uSize : aPos;
+  vec3 n = normalize(aNrm);
+  p += n * uWob * sin(uTime * 2.2 + p.y * 9. + atan(p.x, p.z) * 3.);   // жидкий хром слегка «дышит»
+  p += uOff;
+  vY = p.y;
+  vec4 w = uModel * vec4(p, 1.);
+  vW = w.xyz; vN = (uModel * vec4(n, 0.)).xyz;
+  gl_Position = uProj * uView * w;
+}`;
+const MESH_FRAG = `
+precision highp float;
+uniform vec3 uCam, uC1, uC2; uniform float uLit, uBright, uMat;
+varying vec3 vW, vN; varying float vY;
+${ENV}
+void main(){
+  vec3 n = normalize(vN), v = normalize(vW - uCam);
+  if (dot(n, v) > 0. && uMat > .5) n = -n;
+  vec3 r = reflect(v, n);
+  float facing = max(0., dot(n, -v)), fres = pow(1. - facing, 3.), glow = .25 + .75 * uBright;
+  vec3 lc = mix(uC2, uC1, smoothstep(-.5, 1.2, vY)), col; float a = 1.;
+  if (uMat < .5) {                         // стекло: светится цветом ламп, выключенное — дымчатое зеркало
+    vec3 on = lc * (.18 + 1.35 * facing * facing) * (.45 + .9 * glow) + vec3(1.) * pow(facing, 8.) * .6 * glow + env(r) * (.06 + .45 * fres);
+    vec3 off = env(r) * (.06 + .7 * fres) + vec3(.015, .016, .03);
+    col = mix(off, on, uLit); a = mix(.42 + .5 * fres, .96, uLit);
+  } else if (uMat < 1.5) {                 // хром
+    col = env(r) * mix(vec3(.82, .85, 1.), vec3(1.05), fres) * .9 + vec3(.06, .065, .1) + vec3(.35, .4, .65) * fres;
+    col += lc * uLit * glow * .35 * max(0., -n.y);
+  } else if (uMat < 2.5) {                 // нить: тёмный металл → раскалённая
+    col = mix(vec3(.22, .23, .28) + env(r) * .25, lc * .5 + vec3(1., .92, .8) * 2.4 * glow, uLit);
+  } else {                                 // чёрное стекло изолятора
+    col = env(r) * .14 + vec3(.35, .4, .7) * fres * .35;
+  }
+  col = col / (1. + col * .35);
+  gl_FragColor = vec4(pow(col, vec3(.4545)) * a, a);
+}`;
+
+// тело вращения из профиля [[радиус, высота], ...] сверху вниз; нормали — из касательной профиля
+function lathe(prof, segs) {
+  const pos = [], nrm = [], idx = [], n = prof.length;
+  for (let i = 0; i < n; i++) {
+    const [r, y] = prof[i], a = prof[Math.max(0, i - 1)], b = prof[Math.min(n - 1, i + 1)];
+    let nr = -(b[1] - a[1]), ny = b[0] - a[0];
+    const l = Math.hypot(nr, ny) || 1; nr /= l; ny /= l;
+    for (let j = 0; j <= segs; j++) {
+      const t = j / segs * 2 * Math.PI, c = Math.cos(t), s = -Math.sin(t);
+      pos.push(r * c, y, r * s); nrm.push(nr * c, ny, nr * s);
+    }
+  }
+  for (let i = 0; i < n - 1; i++) for (let j = 0; j < segs; j++) {
+    const a = i * (segs + 1) + j, b = a + segs + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  return {pos: new Float32Array(pos), nrm: new Float32Array(nrm), idx: new Uint16Array(idx)};
+}
+const glassR = (prof, y) => {
+  for (let i = 1; i < prof.length; i++) if (prof[i][1] <= y) { const [r1, y1] = prof[i - 1], [r2, y2] = prof[i]; return r1 + (r2 - r1) * (y1 - y) / ((y1 - y2) || 1); }
+  return .45;
+};
 
 function createLamp(box) {
   const canvas = document.createElement("canvas");
   box.prepend(canvas);
-  const gl = canvas.getContext("webgl", {antialias: false, alpha: true, premultipliedAlpha: true, powerPreference: "high-performance"});
+  const gl = canvas.getContext("webgl", {antialias: true, alpha: true, premultipliedAlpha: true, powerPreference: "high-performance"});
   const fallback = () => { canvas.remove(); box.insertAdjacentHTML("afterbegin", `<div class="y2k-nogl">3D недоступно на этом устройстве<br>пульт ниже работает</div>`); return null; };
   if (!gl) return fallback();
-  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-  const prog = gl.createProgram();
-  try { gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG)); }
-  catch (e) { console.error(e); return fallback(); }
-  gl.linkProgram(prog); gl.useProgram(prog);
-  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  const program = (vs, fs) => {
+    const p = gl.createProgram();
+    for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
+      const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+      gl.attachShader(p, sh);
+    }
+    gl.linkProgram(p);
+    const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
+    return {p, u};
+  };
+  let bg, mesh;
+  try { bg = program(BG_VERT, BG_FRAG); mesh = program(MESH_VERT, MESH_FRAG); } catch (e) { console.error(e); return fallback(); }
+  const quad = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog, "p");
-  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const U = name => gl.getUniformLocation(prog, name);
-  const u = {res: U("uRes"), time: U("uTime"), yaw: U("uYaw"), lit: U("uLit"), bright: U("uBright"), ripple: U("uRipple"), scale: U("uScale"), c1: U("uC1"), c2: U("uC2")};
+  const aPos = gl.getAttribLocation(mesh.p, "aPos"), aNrm = gl.getAttribLocation(mesh.p, "aNrm"), aQuad = gl.getAttribLocation(bg.p, "p");
 
-  // плавные значения: картинка догоняет состояние ламп, а не прыгает
+  // ---------- модель ----------
+  let parts = [], glassProf = null, drop = null;
+  const upload = (data, target = gl.ARRAY_BUFFER) => { const b = gl.createBuffer(); gl.bindBuffer(target, b); gl.bufferData(target, data, gl.STATIC_DRAW); return b; };
+  Promise.all(["lamp.json", "lamp.bin"].map(f => fetch(new URL(`./y2k/${f}`, import.meta.url)).then(r => f.endsWith(".json") ? r.json() : r.arrayBuffer())))
+    .then(([meta, bin]) => {
+      for (const p of meta.parts) {
+        let part;
+        if (p.lathe) {
+          const g = lathe(p.lathe, p.segs);
+          part = {quant: false, pos: upload(g.pos), nrm: upload(g.nrm), idx: upload(g.idx, gl.ELEMENT_ARRAY_BUFFER), count: g.idx.length, posType: gl.FLOAT, nrmType: gl.FLOAT, norm: false};
+          if (p.name === "Glass") glassProf = p.lathe;
+        } else {
+          part = {quant: true, min: p.min, size: p.size, pos: upload(new Int16Array(bin, p.pos, p.count * 3)), nrm: upload(new Int8Array(bin, p.nrm, p.count * 4)),
+                  idx: upload(new Uint16Array(bin, p.idx, p.indices), gl.ELEMENT_ARRAY_BUFFER), count: p.indices, posType: gl.SHORT, nrmType: gl.BYTE, norm: true, nrmSize: 4};
+        }
+        part.mat = p.mat; part.name = p.name;
+        part.wob = p.name === "Crown" || p.name.startsWith("Drop") ? .004 : 0;
+        parts.push(part);
+        if (p.name === "Drop0") drop = {...part, center: p.min.map((m, i) => m + p.size[i] / 2)};
+      }
+      // стекло рисуем последним: оно полупрозрачное
+      parts.sort((a, b) => (a.mat === 0) - (b.mat === 0));
+      loaded = true;
+    })
+    .catch(e => console.error("lamp model", e));
+  let loaded = false;
+
+  // ---------- состояние и анимация ----------
   const lin = c => c.map(x => Math.pow(x / 255, 2.2));
   const want = {lit: 0, bright: 0, c1: lin([150, 165, 255]), c2: lin([150, 165, 255])};
-  const now = {lit: 0, bright: 0, c1: [...want.c1], c2: [...want.c2], yaw: 0, vel: .35, ripple: 0};
+  const now = {lit: 0, bright: 0, c1: [...want.c1], c2: [...want.c2], yaw: .4, vel: .3, ripple: 0};
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let scale = Math.min(1.5, window.devicePixelRatio || 1), raf = 0, last = performance.now(), slow = 0;
-  const t0 = performance.now();
+  let scale = Math.min(2, window.devicePixelRatio || 1), raf = 0, last = performance.now(), slow = 0;
+  const t0 = performance.now(), CAM = [0, .1, 8.2];
 
   function resize() {
-    const w = box.clientWidth, h = box.clientHeight;
-    canvas.width = Math.max(1, Math.round(w * scale)); canvas.height = Math.max(1, Math.round(h * scale));
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    canvas.width = Math.max(1, Math.round(box.clientWidth * scale)); canvas.height = Math.max(1, Math.round(box.clientHeight * scale));
   }
   const ro = new ResizeObserver(resize);
   ro.observe(box); resize();
+
+  const perspective = (fovy, aspect, n, f) => { const t = 1 / Math.tan(fovy / 2); return [t / aspect, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]; };
+  const view = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -CAM[0], -CAM[1], -CAM[2], 1];
+  const model = (yaw, tilt) => { const c = Math.cos(yaw), s = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
+    return [c, s * st, -s * ct, 0, 0, ct, st, 0, s, -c * st, c * ct, 0, 0, 0, 0, 1]; };
+  // движущиеся капли: от кончика потёка вниз по стеклу к горлу
+  const RUNS = [{ang: 0, y0: .04, ph: 0}, {ang: 4.267, y0: .13, ph: .5}];
 
   function frame(t) {
     raf = requestAnimationFrame(frame);
     if (document.hidden) return;
     const dt = Math.min(.05, (t - last) / 1000); last = t;
-    const k = 1 - Math.exp(-dt * 4);
+    const k = 1 - Math.exp(-dt * 4), time = reduced ? 0 : (t - t0) / 1000;
     now.lit += (want.lit - now.lit) * k; now.bright += (want.bright - now.bright) * k;
     for (let i = 0; i < 3; i++) { now.c1[i] += (want.c1[i] - now.c1[i]) * k; now.c2[i] += (want.c2[i] - now.c2[i]) * k; }
-    // вращение: палец докручивает с инерцией, потом лампа медленно крутится сама
     now.yaw += now.vel * dt;
-    now.vel += ((reduced ? 0 : .35) - now.vel) * (1 - Math.exp(-dt * 1.2));
+    now.vel += ((reduced ? 0 : .3) - now.vel) * (1 - Math.exp(-dt * 1.2));
     now.ripple *= Math.exp(-dt * 2.5);
-    gl.uniform2f(u.res, canvas.width, canvas.height);
-    gl.uniform1f(u.time, reduced ? 0 : (t - t0) / 1000);
-    gl.uniform1f(u.yaw, now.yaw);
-    gl.uniform1f(u.lit, now.lit); gl.uniform1f(u.bright, now.bright);
-    gl.uniform1f(u.ripple, now.ripple); gl.uniform1f(u.scale, scale);
-    gl.uniform3fv(u.c1, now.c1); gl.uniform3fv(u.c2, now.c2);
+    const W = canvas.width, H = canvas.height, proj = perspective(.56, W / H, .1, 50);
+    gl.viewport(0, 0, W, H);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // фон, сетка, отсвет и хромовая рамка
+    const cy = (1 / Math.tan(.28) * (.45 - CAM[1]) / CAM[2] * .5 + .5) * H;   // где на экране центр колбы
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
+    gl.useProgram(bg.p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.enableVertexAttribArray(aQuad); gl.vertexAttribPointer(aQuad, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform2f(bg.u.uRes, W, H); gl.uniform3f(bg.u.uGlow, W / 2, cy, H * .32);
+    gl.uniform1f(bg.u.uTime, time); gl.uniform1f(bg.u.uLit, now.lit); gl.uniform1f(bg.u.uBright, now.bright); gl.uniform1f(bg.u.uScale, scale);
+    gl.uniform3fv(bg.u.uC1, now.c1); gl.uniform3fv(bg.u.uC2, now.c2);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    // слабый телефон не тянет — снижаем разрешение рендера, но не ниже 0.6
+    gl.disableVertexAttribArray(aQuad);
+
+    if (loaded) {
+      gl.useProgram(mesh.p);
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniformMatrix4fv(mesh.u.uProj, false, proj); gl.uniformMatrix4fv(mesh.u.uView, false, view);
+      gl.uniformMatrix4fv(mesh.u.uModel, false, model(now.yaw, .1));
+      gl.uniform3fv(mesh.u.uCam, CAM); gl.uniform3fv(mesh.u.uC1, now.c1); gl.uniform3fv(mesh.u.uC2, now.c2);
+      gl.uniform1f(mesh.u.uLit, now.lit); gl.uniform1f(mesh.u.uBright, now.bright); gl.uniform1f(mesh.u.uTime, time);
+      const draw = (p, off = [0, 0, 0]) => {
+        gl.uniform1f(mesh.u.uQuant, p.quant ? 1 : 0);
+        if (p.quant) { gl.uniform3fv(mesh.u.uMin, p.min); gl.uniform3fv(mesh.u.uSize, p.size); }
+        gl.uniform3fv(mesh.u.uOff, off); gl.uniform1f(mesh.u.uMat, p.mat); gl.uniform1f(mesh.u.uWob, p.wob * (1 + now.ripple * 5));
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.pos); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 3, p.posType, p.norm, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.nrm); gl.enableVertexAttribArray(aNrm); gl.vertexAttribPointer(aNrm, 3, p.nrmType, p.norm, p.quant ? 4 : 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, p.idx);
+        if (p.mat === 0) { gl.depthMask(false); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); }   // у стекла только внешняя сторона
+        gl.drawElements(gl.TRIANGLES, p.count, gl.UNSIGNED_SHORT, 0);
+        gl.depthMask(true); gl.disable(gl.CULL_FACE);
+      };
+      for (const p of parts) {
+        if (p.mat === 0 && drop && glassProf) for (const run of RUNS) {   // капли рисуем до стекла
+          const ph = (time * .11 + run.ph) % 1, y = run.y0 - ph * .55, r = glassR(glassProf, y) + .03;
+          const at = [r * Math.cos(run.ang), y, -r * Math.sin(run.ang)];
+          draw(drop, at.map((v, i) => v - drop.center[i]));
+        }
+        draw(p);
+      }
+    }
     if (dt > .028) slow++; else slow = Math.max(0, slow - 1);
-    if (slow > 40 && scale > .6) { scale = Math.max(.6, scale * .8); slow = 0; resize(); }
+    if (slow > 40 && scale > .75) { scale = Math.max(.75, scale * .8); slow = 0; resize(); }
     window.__y2kFps = Math.round(1 / Math.max(dt, .001));
   }
   raf = requestAnimationFrame(frame);
   canvas.addEventListener("webglcontextlost", e => { e.preventDefault(); cancelAnimationFrame(raf); });
 
   return {
-    set(s) {
-      want.lit = s.on ? 1 : 0; want.bright = s.bright / 100;
-      want.c1 = lin(s.c1); want.c2 = lin(s.c2);
-    },
+    set(s) { want.lit = s.on ? 1 : 0; want.bright = s.bright / 100; want.c1 = lin(s.c1); want.c2 = lin(s.c2); },
     spin(d) { now.yaw += d; now.vel = d * 50; },
     ripple() { now.ripple = 1; },
     dispose() { cancelAnimationFrame(raf); ro.disconnect(); gl.getExtension("WEBGL_lose_context")?.loseContext(); canvas.remove(); },

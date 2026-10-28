@@ -33,7 +33,7 @@ html[data-theme="lamp"] { --bg: #0d0d10; --text: #f4f2ee; --hint: #9a978f; --acc
 html[data-theme="lamp"] body { background: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--glow) 22%, #0d0d10), #0d0d10 70%) fixed; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { overflow-x: hidden; }
+html, body { overflow-x: hidden; overscroll-behavior: none; }
 body { margin: 0; padding: 16px 16px 32px; background: var(--bg); color: var(--text);
        font: 16px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; transition: background-color .4s; }
 h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -.2px; }
@@ -284,6 +284,8 @@ html[data-theme="lamp"] .sw.on::after { background: #15120c; }
 <script>
 const tg = window.Telegram?.WebApp;
 tg?.ready(); tg?.expand();
+// ползунки и свайпы по лампе не должны сворачивать мини-апп (Bot API 7.7+)
+try { if (tg?.isVersionAtLeast?.("7.7")) tg.disableVerticalSwipes(); } catch {}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 const haptic = {
@@ -869,7 +871,7 @@ const App = window.App = {
   ids, shown, cmd, scene, api, load, toast, haptic, sound, resume, setTimer, store,
   preview(patch) { for (const i of ids()) Object.assign(S.lamps[i], {on: true}, patch); special?.update(); },
   lampRgb, kRgb, hsvRgb, css, esc, hm, SCENES,
-  openSettings, openModes: () => openPane("p-modes", "Режимы"), openScenes: () => openPane("p-scenes", "Сцены"), openThemes, closeSheet,
+  openSettings, openModes: () => openPane("p-modes", "Режимы"), openScenes: title => openPane("p-scenes", title || "Сцены"), openThemes, closeSheet,
 };
 
 // ---------- настройки: имена ламп и доступ ----------
