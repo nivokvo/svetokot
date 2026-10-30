@@ -86,7 +86,8 @@ export async function sendEach(env, list) {
   for (const x of list) patchCache(x.ids, x.cmd);
   if (bad.length) {
     const unreachable = bad.some(r => /UNREACHABLE|OFFLINE|NOT_FOUND/i.test(r.error_code || ""));
-    throw new LampError(unreachable ? "Лампа не в сети: проверьте, что она включена в розетку." : "Лампа не выполнила команду. Попробуйте ещё раз.", "action");
+    if (unreachable) throw new LampError("Лампа не в сети: проверьте, что она включена в розетку.", "offline");
+    throw new LampError("Лампа не выполнила команду. Попробуйте ещё раз.", "action");
   }
 }
 

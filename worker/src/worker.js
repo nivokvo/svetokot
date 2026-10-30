@@ -435,9 +435,10 @@ async function resumeCircadianAndOn(env, ids) {
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // Ошибки — владельцу в Telegram, не чаще раза в час. Истёкший токен Яндекса — с инструкцией.
+// Лампа не в сети — не ошибка: её часто выключают выключателем.
 async function alarm(env, where, e) {
   console.error(where, e);
-  if (!env.BOT_TOKEN) return;
+  if (!env.BOT_TOKEN || e?.code === "offline") return;
   const now = Date.now(), last = await kvGet(env, "alarm_at", 0).catch(() => 0);
   if (now - last < 3600e3) return;
   await kvSet(env, "alarm_at", now).catch(() => {});
